@@ -5,12 +5,19 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Ruby ${{ matrix.ruby }}
+    timeout-minutes: 15
     strategy:
+      fail-fast: false
       matrix:
         ruby:
           - "3.1"
@@ -34,6 +41,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     name: Quality
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
         with:

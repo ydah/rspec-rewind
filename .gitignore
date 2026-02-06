@@ -8,3 +8,4 @@
 /.byebug_history
 .rspec_status
 .DS_Store
+/.tmp_rubocop_cache
