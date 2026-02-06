@@ -95,13 +95,20 @@ module RSpec
 
         metadata = example_metadata
         configured = first_non_nil(
-          explicit_retries,
-          metadata[:rewind],
-          metadata[:retry],
+          normalize_retry_override(explicit_retries),
+          normalize_retry_override(metadata[:rewind]),
+          normalize_retry_override(metadata[:retry]),
           @configuration.default_retries
         )
 
         parse_non_negative_integer(configured, source: 'retries')
+      end
+
+      def normalize_retry_override(value)
+        return nil if value.nil? || value == true
+        return 0 if value == false
+
+        value
       end
 
       def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)

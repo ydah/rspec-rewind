@@ -275,6 +275,20 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
+  it 'treats metadata rewind: true as an enable flag and uses defaults' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: true },
+      configure: lambda do |config|
+        config.default_retries = 1
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(2)
+  end
+
   it 'uses configuration default when no override is provided' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
@@ -302,6 +316,17 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   ensure
     ENV['RSPEC_REWIND_RETRIES'] = original
+  end
+
+  it 'treats explicit retries: false as zero retries' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: 2 }
+    )
+
+    runner.run(retries: false)
+
+    expect(example.run_calls).to eq(1)
   end
 
   it 'raises when RSPEC_REWIND_RETRIES is invalid' do
