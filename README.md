@@ -1,39 +1,121 @@
-# Rspec::Rewind
+# rspec-rewind
 
-TODO: Delete this and the text below, and describe your gem
+[![CI](https://github.com/ydah/rspec-rewind/actions/workflows/ci.yml/badge.svg)](https://github.com/ydah/rspec-rewind/actions/workflows/ci.yml)
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/rspec/rewind`. To experiment with that code, run `bin/console` for an interactive prompt.
+`rspec-rewind` is a modern retry orchestration gem for RSpec.
+It was inspired by [`rspec-retry`](https://github.com/NoRedInk/rspec-retry), but focuses on deterministic control and flaky-test observability.
+
+## Why another retry gem?
+
+`rspec-rewind` is opinionated for current CI workflows:
+
+- Clear semantics: `retries` means "extra attempts" (not total attempts).
+- Retry policy controls: `retry_on`, `skip_retry_on`, and `retry_if` predicate.
+- Built-in backoff strategies with optional jitter.
+- Suite-level retry budget to avoid hidden CI slowdowns.
+- Flaky detection events and optional JSONL report output.
 
 ## Installation
 
-TODO: Replace `UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG` with your gem name right after releasing it to RubyGems.org. Please do not do it earlier due to security reasons. Alternatively, replace this section with instructions to install your gem from git if you don't plan to release to RubyGems.org.
+Add this line to your application's Gemfile:
 
-Install the gem and add to the application's Gemfile by executing:
-
-```bash
-bundle add UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+```ruby
+gem "rspec-rewind"
 ```
 
-If bundler is not being used to manage dependencies, install the gem by executing:
+And then execute:
 
 ```bash
-gem install UPDATE_WITH_YOUR_GEM_NAME_IMMEDIATELY_AFTER_RELEASE_TO_RUBYGEMS_ORG
+bundle install
 ```
 
-## Usage
+## Quick start
 
-TODO: Write usage instructions here
+```ruby
+# spec/spec_helper.rb
+require "rspec/rewind"
+
+RSpec::Rewind.configure do |config|
+  config.default_retries = 1
+  config.backoff = RSpec::Rewind::Backoff.exponential(base: 0.1, factor: 2, max: 1.0)
+  config.retry_on = [Net::ReadTimeout, Errno::ECONNRESET]
+  config.skip_retry_on = [NoMethodError]
+  config.retry_budget = 20
+  config.flaky_report_path = "tmp/rspec-rewind/flaky.jsonl"
+end
+```
+
+### Per-example override
+
+```ruby
+it "is eventually consistent", rewind: 3, rewind_wait: 0.2 do
+  expect(fetch_remote_state).to eq("ready")
+end
+
+it "retries only transient HTTP failures",
+   rewind: 2,
+   rewind_retry_on: [Net::ReadTimeout, /502/],
+   rewind_skip_retry_on: [NoMethodError],
+   rewind_if: ->(exception, _example) { exception.message.include?("gateway") } do
+  expect(call_api).to eq(:ok)
+end
+```
+
+## Configuration reference
+
+```ruby
+RSpec::Rewind.configure do |config|
+  config.default_retries = 0
+  config.backoff = RSpec::Rewind::Backoff.fixed(0)
+  config.retry_on = []
+  config.skip_retry_on = []
+  config.retry_if = nil
+  config.retry_callback = ->(event) { puts "retry ##{event.attempt} for #{event.example_id}" }
+  config.flaky_callback = ->(event) { puts "flaky: #{event.description}" }
+  config.retry_budget = nil
+  config.flaky_report_path = nil
+  config.verbose = false
+  config.display_retry_failure_messages = false
+  config.clear_lets_on_failure = true
+end
+```
+
+### Backoff helpers
+
+```ruby
+RSpec::Rewind::Backoff.fixed(0.2)
+RSpec::Rewind::Backoff.linear(step: 0.1, max: 1.0)
+RSpec::Rewind::Backoff.exponential(base: 0.1, factor: 2.0, max: 2.0, jitter: 0.2)
+```
+
+## JSONL flaky report format
+
+Each entry contains:
+
+- `status`
+- `example_id`
+- `description`
+- `location`
+- `attempt`
+- `retries`
+- `exception_class`
+- `exception_message`
+- `duration`
+- `sleep_seconds`
+- `timestamp`
+
+## Compatibility notes
+
+- Ruby `>= 3.0`
+- RSpec Core `>= 3.12`, `< 4.0`
 
 ## Development
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+```bash
+bundle exec rspec
+```
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and the created tag, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+CI runs on every push and pull request, and validates:
 
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/rspec-rewind.
-
-## License
-
-The gem is available as open source under the terms of the [MIT License](https://opensource.org/licenses/MIT).
+- Specs across Ruby 3.0-3.4
+- Gem packaging (`rake build`)
