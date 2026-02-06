@@ -32,6 +32,9 @@ module RSpec
         return if @installed
 
         ::RSpec::Core::Example.include(ExampleMethods)
+        if defined?(::RSpec::Core::Example::Procsy)
+          ::RSpec::Core::Example::Procsy.include(ExampleMethods)
+        end
 
         ::RSpec.configure do |config|
           config.around(:each) do |example|

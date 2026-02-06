@@ -18,10 +18,7 @@ module RSpec
         attempt = 1
 
         while attempt <= total_attempts
-          started_at = monotonic_time
-          @example.run
-          duration = monotonic_time - started_at
-          exception = @example.exception
+          exception, duration, raised = run_attempt
 
           if exception.nil?
             publish_flaky_event(attempt: attempt, retries: resolved_retries, duration: duration) if attempt > 1
@@ -30,15 +27,18 @@ module RSpec
 
           retry_number = attempt
           unless retry_number <= resolved_retries
+            raise exception if raised
             return
           end
 
           unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on, retry_if: retry_if)
+            raise exception if raised
             return
           end
 
           unless @configuration.retry_budget.consume!
-            debug("retry budget exhausted for #{@example.id}")
+            debug("retry budget exhausted for #{example_id}")
+            raise exception if raised
             return
           end
 
@@ -69,11 +69,26 @@ module RSpec
 
       private
 
+      def run_attempt
+        started_at = monotonic_time
+
+        begin
+          @example.run
+          duration = monotonic_time - started_at
+          [current_exception, duration, false]
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          raise if fatal_exception?(e)
+
+          duration = monotonic_time - started_at
+          [e, duration, true]
+        end
+      end
+
       def resolve_retries(explicit_retries)
         env_retries = ENV.fetch(ENV_RETRIES_KEY, nil)
         return parse_non_negative_integer(env_retries, source: ENV_RETRIES_KEY) if env_retries
 
-        metadata = @example.metadata || {}
+        metadata = example_metadata
         configured = first_non_nil(
           explicit_retries,
           metadata[:rewind],
@@ -85,15 +100,19 @@ module RSpec
       end
 
       def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)
-        metadata = @example.metadata || {}
+        metadata = example_metadata
 
         effective_retry_on = normalize_matchers(@configuration.retry_on) +
                              normalize_matchers(metadata[:rewind_retry_on]) +
                              normalize_matchers(retry_on)
 
+        metadata_skip_retry_on = first_non_nil(
+          metadata[:rewind_skip_retry_on],
+          metadata[:rewind_skip_on]
+        )
+
         effective_skip_retry_on = normalize_matchers(@configuration.skip_retry_on) +
-                                  normalize_matchers(metadata[:rewind_skip_retry_on]) +
-                                  normalize_matchers(metadata[:rewind_skip_on]) +
+                                  normalize_matchers(metadata_skip_retry_on) +
                                   normalize_matchers(skip_retry_on)
 
         effective_retry_if = first_non_nil(retry_if, metadata[:rewind_if], @configuration.retry_if)
@@ -108,7 +127,7 @@ module RSpec
       end
 
       def resolve_sleep_seconds(retry_number:, backoff:, wait:, exception:)
-        metadata = @example.metadata || {}
+        metadata = example_metadata
         explicit_wait = first_non_nil(wait, metadata[:rewind_wait])
 
         return normalize_delay(explicit_wait) if explicit_wait
@@ -151,16 +170,21 @@ module RSpec
       end
 
       def clear_for_retry
-        @example.clear_exception if @example.respond_to?(:clear_exception)
+        source = example_source
+        if source.respond_to?(:clear_exception)
+          source.clear_exception
+        elsif source.instance_variable_defined?(:@exception)
+          source.instance_variable_set(:@exception, nil)
+        end
 
-        clear_execution_result
+        clear_execution_result(source)
         clear_lets if @configuration.clear_lets_on_failure
       end
 
-      def clear_execution_result
-        return unless @example.respond_to?(:execution_result)
+      def clear_execution_result(source)
+        return unless source.respond_to?(:execution_result)
 
-        result = @example.execution_result
+        result = source.execution_result
         return unless result
 
         set_if_writer(result, :status, nil)
@@ -170,9 +194,10 @@ module RSpec
       end
 
       def clear_lets
-        return unless @example.respond_to?(:example_group_instance)
+        source = example_source
+        return unless source.respond_to?(:example_group_instance)
 
-        group_instance = @example.example_group_instance
+        group_instance = source.example_group_instance
         return unless group_instance
 
         if group_instance.respond_to?(:clear_lets)
@@ -194,11 +219,13 @@ module RSpec
       end
 
       def build_event(status:, attempt:, retries:, duration:, sleep_seconds:, exception:)
+        source = example_source
+
         Event.new(
           status: status,
-          example_id: @example.id,
-          description: @example.full_description,
-          location: @example.location,
+          example_id: source.id,
+          description: source.full_description,
+          location: source.location,
           attempt: attempt,
           retries: retries,
           exception_class: exception&.class&.name,
@@ -250,6 +277,37 @@ module RSpec
 
       def first_non_nil(*values)
         values.find { |value| !value.nil? }
+      end
+
+      def example_source
+        return @example.example if @example.respond_to?(:example) && @example.example
+
+        @example
+      end
+
+      def current_exception
+        source = example_source
+        source.respond_to?(:exception) ? source.exception : nil
+      end
+
+      def example_metadata
+        source = example_source
+        return {} unless source.respond_to?(:metadata)
+
+        source.metadata || {}
+      end
+
+      def example_id
+        source = example_source
+        source.respond_to?(:id) ? source.id : "unknown"
+      end
+
+      def fatal_exception?(exception)
+        exception.is_a?(NoMemoryError) ||
+          exception.is_a?(ScriptError) ||
+          exception.is_a?(SignalException) ||
+          exception.is_a?(SystemExit) ||
+          exception.is_a?(SecurityError)
       end
 
       def reporter_message(message)

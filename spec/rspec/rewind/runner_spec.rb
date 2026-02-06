@@ -52,6 +52,20 @@ RSpec.describe RSpec::Rewind::Runner do
     end
   end
 
+  class FakeRaisingExample < FakeExample
+    def run
+      @run_calls += 1
+      outcome = @outcomes.shift
+
+      if outcome.is_a?(Exception)
+        @exception = nil
+        raise outcome
+      end
+
+      @exception = outcome
+    end
+  end
+
   class CollectingReporter
     attr_reader :events
 
@@ -64,11 +78,11 @@ RSpec.describe RSpec::Rewind::Runner do
     end
   end
 
-  def build_runner(outcomes:, metadata: {}, configure: nil)
+  def build_runner(outcomes:, metadata: {}, configure: nil, example_class: FakeExample)
     config = RSpec::Rewind::Configuration.new
     configure&.call(config)
 
-    example = FakeExample.new(outcomes: outcomes, metadata: metadata)
+    example = example_class.new(outcomes: outcomes, metadata: metadata)
     runner = described_class.new(example: example, configuration: config)
     [runner, example, config]
   end
@@ -165,6 +179,21 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
+  it "prefers rewind_skip_retry_on over rewind_skip_on when both are present" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("boom"), nil],
+      metadata: {
+        rewind: 2,
+        rewind_skip_retry_on: [IOError],
+        rewind_skip_on: [RuntimeError]
+      }
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(2)
+  end
+
   it "uses explicit retries argument before metadata and config defaults" do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
@@ -175,6 +204,47 @@ RSpec.describe RSpec::Rewind::Runner do
     )
 
     runner.run(retries: 1)
+
+    expect(example.run_calls).to eq(2)
+  end
+
+  it "uses metadata rewind before configuration default" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      metadata: { rewind: 1 },
+      configure: lambda do |config|
+        config.default_retries = 5
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(2)
+  end
+
+  it "uses metadata retry alias before configuration default" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      metadata: { retry: 1 },
+      configure: lambda do |config|
+        config.default_retries = 5
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(2)
+  end
+
+  it "uses configuration default when no override is provided" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      configure: lambda do |config|
+        config.default_retries = 1
+      end
+    )
+
+    runner.run
 
     expect(example.run_calls).to eq(2)
   end
@@ -191,6 +261,18 @@ RSpec.describe RSpec::Rewind::Runner do
     runner.run(retries: 2)
 
     expect(example.run_calls).to eq(1)
+  ensure
+    ENV["RSPEC_REWIND_RETRIES"] = original
+  end
+
+  it "raises when RSPEC_REWIND_RETRIES is invalid" do
+    original = ENV["RSPEC_REWIND_RETRIES"]
+    ENV["RSPEC_REWIND_RETRIES"] = "many"
+    runner, = build_runner(outcomes: [nil], metadata: {})
+
+    expect do
+      runner.run(retries: 2)
+    end.to raise_error(ArgumentError, /RSPEC_REWIND_RETRIES must be a non-negative integer/)
   ensure
     ENV["RSPEC_REWIND_RETRIES"] = original
   end
@@ -245,5 +327,27 @@ RSpec.describe RSpec::Rewind::Runner do
     runner, = build_runner(outcomes: [nil], metadata: {})
 
     expect { runner.run(retries: -1) }.to raise_error(ArgumentError, /retries must be >= 0/)
+  end
+
+  it "retries when the example raises and then passes" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("boom"), nil],
+      metadata: { rewind: 2 },
+      example_class: FakeRaisingExample
+    )
+
+    expect { runner.run }.not_to raise_error
+    expect(example.run_calls).to eq(2)
+  end
+
+  it "re-raises the final exception when retries are exhausted" do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new("first"), RuntimeError.new("last")],
+      metadata: { rewind: 1 },
+      example_class: FakeRaisingExample
+    )
+
+    expect { runner.run }.to raise_error(RuntimeError, "last")
+    expect(example.run_calls).to eq(2)
   end
 end

@@ -61,6 +61,8 @@ it "retries only transient HTTP failures",
 end
 ```
 
+`rewind_skip_retry_on` is the preferred key. `rewind_skip_on` is still accepted as a legacy alias.
+
 ## Configuration reference
 
 ```ruby
