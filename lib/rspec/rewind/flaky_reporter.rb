@@ -28,7 +28,9 @@ module RSpec
 
         def record(event)
           payload = {
+            schema_version: event.schema_version,
             status: event.status,
+            retry_reason: event.retry_reason,
             example_id: event.example_id,
             description: event.description,
             location: event.location,

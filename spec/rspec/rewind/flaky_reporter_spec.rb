@@ -11,7 +11,9 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
       reporter = described_class.new(path)
 
       event = RSpec::Rewind::Event.new(
+        schema_version: 1,
         status: :flaky,
+        retry_reason: nil,
         example_id: "spec/foo_spec.rb[1:1]",
         description: "sometimes fails",
         location: "spec/foo_spec.rb:5",
@@ -29,7 +31,9 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
       line = File.read(path).strip
       payload = JSON.parse(line)
 
+      expect(payload["schema_version"]).to eq(1)
       expect(payload["status"]).to eq("flaky")
+      expect(payload["retry_reason"]).to be_nil
       expect(payload["attempt"]).to eq(2)
       expect(payload["description"]).to eq("sometimes fails")
     end
@@ -41,7 +45,9 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
       reporter = described_class.new(path)
 
       event = RSpec::Rewind::Event.new(
+        schema_version: 1,
         status: :flaky,
+        retry_reason: nil,
         example_id: "spec/foo_spec.rb[1:1]",
         description: "sometimes fails",
         location: "spec/foo_spec.rb:5",

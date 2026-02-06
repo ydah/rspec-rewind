@@ -2,8 +2,12 @@
 
 module RSpec
   module Rewind
+    EVENT_SCHEMA_VERSION = 1
+
     Event = Struct.new(
+      :schema_version,
       :status,
+      :retry_reason,
       :example_id,
       :description,
       :location,

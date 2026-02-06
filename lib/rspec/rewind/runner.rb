@@ -51,6 +51,7 @@ module RSpec
 
           event = build_event(
             status: :retrying,
+            retry_reason: :exception,
             attempt: retry_number,
             retries: resolved_retries,
             duration: duration,
@@ -149,6 +150,7 @@ module RSpec
       def publish_flaky_event(attempt:, retries:, duration:)
         event = build_event(
           status: :flaky,
+          retry_reason: nil,
           attempt: attempt,
           retries: retries,
           duration: duration,
@@ -218,11 +220,13 @@ module RSpec
         Kernel.sleep(seconds)
       end
 
-      def build_event(status:, attempt:, retries:, duration:, sleep_seconds:, exception:)
+      def build_event(status:, retry_reason:, attempt:, retries:, duration:, sleep_seconds:, exception:)
         source = example_source
 
         Event.new(
+          schema_version: EVENT_SCHEMA_VERSION,
           status: status,
+          retry_reason: retry_reason,
           example_id: source.id,
           description: source.full_description,
           location: source.location,

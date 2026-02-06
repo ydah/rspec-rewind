@@ -53,6 +53,30 @@ RSpec.describe RSpec::Rewind::RetryDecision do
     expect(decision.retry?).to be(true)
   end
 
+  it "passes example context to two-argument callable matchers" do
+    decision = described_class.new(
+      exception: RuntimeError.new("temporary outage"),
+      example: example,
+      retry_on: [->(exception, ex) { exception.message.include?("outage") && ex.equal?(example) }],
+      skip_retry_on: [],
+      retry_if: nil
+    )
+
+    expect(decision.retry?).to be(true)
+  end
+
+  it "supports one-argument retry_if predicates" do
+    decision = described_class.new(
+      exception: RuntimeError.new("temporary"),
+      example: example,
+      retry_on: [],
+      skip_retry_on: [],
+      retry_if: ->(exception) { exception.message == "temporary" }
+    )
+
+    expect(decision.retry?).to be(true)
+  end
+
   it "treats matcher errors as non-match" do
     decision = described_class.new(
       exception: RuntimeError.new("boom"),

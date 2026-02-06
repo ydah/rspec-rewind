@@ -140,7 +140,9 @@ RSpec.describe RSpec::Rewind::Runner do
 
     expect(reporter.events.size).to eq(1)
     event = reporter.events.first
+    expect(event.schema_version).to eq(1)
     expect(event.status).to eq(:flaky)
+    expect(event.retry_reason).to be_nil
     expect(event.attempt).to eq(2)
   end
 
@@ -306,7 +308,9 @@ RSpec.describe RSpec::Rewind::Runner do
 
     expect(callback_events.size).to eq(1)
     event = callback_events.first
+    expect(event.schema_version).to eq(1)
     expect(event.status).to eq(:retrying)
+    expect(event.retry_reason).to eq(:exception)
     expect(event.attempt).to eq(1)
   end
 

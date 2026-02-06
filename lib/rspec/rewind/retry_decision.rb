@@ -21,7 +21,7 @@ module RSpec
 
         return true unless @retry_if
 
-        !!@retry_if.call(@exception, @example)
+        !!call_with_context(@retry_if)
       end
 
       private
@@ -37,10 +37,31 @@ module RSpec
         when Regexp
           matcher.match?(@exception.message.to_s)
         else
-          matcher.respond_to?(:call) && !!matcher.call(@exception)
+          matcher.respond_to?(:call) && !!call_with_context(matcher)
         end
       rescue StandardError
         false
+      end
+
+      def call_with_context(callable)
+        arity = callable_arity(callable)
+        return callable.call if arity == 0
+
+        required = arity.negative? ? (-arity - 1) : arity
+        args = [@exception, @example]
+        args << nil while args.length < required
+
+        if arity.positive?
+          callable.call(*args.take(arity))
+        else
+          callable.call(*args)
+        end
+      end
+
+      def callable_arity(callable)
+        return callable.arity if callable.respond_to?(:arity)
+
+        callable.method(:call).arity
       end
 
       def normalize_matchers(values)

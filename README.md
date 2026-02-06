@@ -62,6 +62,7 @@ end
 ```
 
 `rewind_skip_retry_on` is the preferred key. `rewind_skip_on` is still accepted as a legacy alias.
+Callable filters can accept either `(exception)` or `(exception, example)`.
 
 ## Configuration reference
 
@@ -94,7 +95,9 @@ RSpec::Rewind::Backoff.exponential(base: 0.1, factor: 2.0, max: 2.0, jitter: 0.2
 
 Each entry contains:
 
+- `schema_version`
 - `status`
+- `retry_reason`
 - `example_id`
 - `description`
 - `location`

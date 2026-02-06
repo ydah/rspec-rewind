@@ -41,6 +41,64 @@ RSpec.describe RSpec::Rewind::Configuration do
     end
   end
 
+  describe "validation" do
+    it "raises when default_retries is invalid" do
+      config = described_class.new
+
+      expect do
+        config.default_retries = -1
+      end.to raise_error(ArgumentError, /default_retries must be >= 0/)
+
+      expect do
+        config.default_retries = "many"
+      end.to raise_error(ArgumentError, /default_retries must be a non-negative integer/)
+    end
+
+    it "raises when backoff is invalid" do
+      config = described_class.new
+
+      expect do
+        config.backoff = -0.1
+      end.to raise_error(ArgumentError, /backoff must be >= 0/)
+
+      expect do
+        config.backoff = :fast
+      end.to raise_error(ArgumentError, /backoff must be a non-negative numeric value or callable/)
+    end
+
+    it "raises when callbacks are not callable" do
+      config = described_class.new
+
+      expect do
+        config.retry_if = :predicate
+      end.to raise_error(ArgumentError, /retry_if must be nil or callable/)
+
+      expect do
+        config.retry_callback = :callback
+      end.to raise_error(ArgumentError, /retry_callback must be nil or callable/)
+
+      expect do
+        config.flaky_callback = :callback
+      end.to raise_error(ArgumentError, /flaky_callback must be nil or callable/)
+    end
+
+    it "raises when boolean settings are not booleans" do
+      config = described_class.new
+
+      expect do
+        config.verbose = nil
+      end.to raise_error(ArgumentError, /verbose must be true or false/)
+
+      expect do
+        config.display_retry_failure_messages = "yes"
+      end.to raise_error(ArgumentError, /display_retry_failure_messages must be true or false/)
+
+      expect do
+        config.clear_lets_on_failure = 1
+      end.to raise_error(ArgumentError, /clear_lets_on_failure must be true or false/)
+    end
+  end
+
   describe "flaky reporter configuration" do
     it "switches reporter by flaky_report_path" do
       config = described_class.new
