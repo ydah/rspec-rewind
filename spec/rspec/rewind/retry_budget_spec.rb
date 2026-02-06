@@ -1,9 +1,9 @@
 # frozen_string_literal: true
 
-require "spec_helper"
+require 'spec_helper'
 
 RSpec.describe RSpec::Rewind::RetryBudget do
-  it "allows unlimited retries when limit is nil" do
+  it 'allows unlimited retries when limit is nil' do
     budget = described_class.new(nil)
 
     3.times { expect(budget.consume!).to be(true) }
@@ -11,7 +11,7 @@ RSpec.describe RSpec::Rewind::RetryBudget do
     expect(budget.remaining).to eq(Float::INFINITY)
   end
 
-  it "stops consuming retries once the budget is exhausted" do
+  it 'stops consuming retries once the budget is exhausted' do
     budget = described_class.new(2)
 
     expect(budget.consume!).to be(true)
@@ -21,8 +21,10 @@ RSpec.describe RSpec::Rewind::RetryBudget do
     expect(budget.remaining).to eq(0)
   end
 
-  it "raises on invalid limit" do
-    expect { described_class.new("many") }.to raise_error(ArgumentError, /retry budget must be nil or a non-negative integer/)
+  it 'raises on invalid limit' do
+    expect do
+      described_class.new('many')
+    end.to raise_error(ArgumentError, /retry budget must be nil or a non-negative integer/)
     expect { described_class.new(-1) }.to raise_error(ArgumentError, /retry budget must be >= 0/)
   end
 end

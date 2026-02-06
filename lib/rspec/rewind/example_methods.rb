@@ -23,7 +23,7 @@ module RSpec
           retry_on: symbolized[:retry_on],
           skip_retry_on: symbolized[:skip_retry_on],
           retry_if: symbolized[:retry_if]
-        }.reject { |_k, value| value.nil? }
+        }.compact
       end
     end
   end

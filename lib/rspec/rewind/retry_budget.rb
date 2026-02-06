@@ -40,10 +40,10 @@ module RSpec
         parsed = begin
           Integer(limit)
         rescue TypeError, ArgumentError
-          raise ArgumentError, "retry budget must be nil or a non-negative integer"
+          raise ArgumentError, 'retry budget must be nil or a non-negative integer'
         end
 
-        raise ArgumentError, "retry budget must be >= 0" if parsed.negative?
+        raise ArgumentError, 'retry budget must be >= 0' if parsed.negative?
 
         parsed
       end

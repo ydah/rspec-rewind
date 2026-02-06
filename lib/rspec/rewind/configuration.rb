@@ -3,18 +3,8 @@
 module RSpec
   module Rewind
     class Configuration
-      attr_reader :default_retries,
-                  :backoff,
-                  :retry_on,
-                  :skip_retry_on,
-                  :retry_if,
-                  :retry_callback,
-                  :flaky_callback,
-                  :verbose,
-                  :display_retry_failure_messages,
-                  :clear_lets_on_failure
-
-      attr_reader :retry_budget, :flaky_reporter
+      attr_reader :default_retries, :backoff, :retry_on, :skip_retry_on, :retry_if, :retry_callback, :flaky_callback,
+                  :verbose, :display_retry_failure_messages, :clear_lets_on_failure, :retry_budget, :flaky_reporter
 
       def initialize
         self.default_retries = 0
@@ -32,7 +22,7 @@ module RSpec
       end
 
       def default_retries=(value)
-        @default_retries = parse_non_negative_integer(value, source: "default_retries")
+        @default_retries = parse_non_negative_integer(value, source: 'default_retries')
       end
 
       def backoff=(value)
@@ -48,27 +38,27 @@ module RSpec
       end
 
       def retry_if=(callable)
-        @retry_if = normalize_callable(callable, field: "retry_if")
+        @retry_if = normalize_callable(callable, field: 'retry_if')
       end
 
       def retry_callback=(callable)
-        @retry_callback = normalize_callable(callable, field: "retry_callback")
+        @retry_callback = normalize_callable(callable, field: 'retry_callback')
       end
 
       def flaky_callback=(callable)
-        @flaky_callback = normalize_callable(callable, field: "flaky_callback")
+        @flaky_callback = normalize_callable(callable, field: 'flaky_callback')
       end
 
       def verbose=(value)
-        @verbose = normalize_boolean(value, field: "verbose")
+        @verbose = normalize_boolean(value, field: 'verbose')
       end
 
       def display_retry_failure_messages=(value)
-        @display_retry_failure_messages = normalize_boolean(value, field: "display_retry_failure_messages")
+        @display_retry_failure_messages = normalize_boolean(value, field: 'display_retry_failure_messages')
       end
 
       def clear_lets_on_failure=(value)
-        @clear_lets_on_failure = normalize_boolean(value, field: "clear_lets_on_failure")
+        @clear_lets_on_failure = normalize_boolean(value, field: 'clear_lets_on_failure')
       end
 
       def retry_budget=(limit_or_budget)
@@ -105,14 +95,14 @@ module RSpec
       def normalize_backoff(value)
         if value.is_a?(Numeric)
           number = Float(value)
-          raise ArgumentError, "backoff must be >= 0" if number.negative?
+          raise ArgumentError, 'backoff must be >= 0' if number.negative?
 
           return number
         end
 
         return value if value.respond_to?(:call)
 
-        raise ArgumentError, "backoff must be a non-negative numeric value or callable"
+        raise ArgumentError, 'backoff must be a non-negative numeric value or callable'
       end
 
       def normalize_matchers(values)
@@ -128,7 +118,7 @@ module RSpec
       end
 
       def normalize_boolean(value, field:)
-        return value if value == true || value == false
+        return value if [true, false].include?(value)
 
         raise ArgumentError, "#{field} must be true or false"
       end

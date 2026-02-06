@@ -15,9 +15,7 @@ module RSpec
         return false unless @exception
         return false if matches_any?(@skip_retry_on)
 
-        if @retry_on.any? && !matches_any?(@retry_on)
-          return false
-        end
+        return false if @retry_on.any? && !matches_any?(@retry_on)
 
         return true unless @retry_if
 
@@ -45,7 +43,7 @@ module RSpec
 
       def call_with_context(callable)
         arity = callable_arity(callable)
-        return callable.call if arity == 0
+        return callable.call if arity.zero?
 
         required = arity.negative? ? (-arity - 1) : arity
         args = [@exception, @example]

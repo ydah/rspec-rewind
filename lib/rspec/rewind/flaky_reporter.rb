@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
-require "json"
-require "fileutils"
+require 'json'
+require 'fileutils'
 
 module RSpec
   module Rewind
@@ -45,7 +45,7 @@ module RSpec
 
           @mutex.synchronize do
             FileUtils.mkdir_p(File.dirname(@path))
-            File.open(@path, "a") { |file| file.puts(JSON.generate(payload)) }
+            File.open(@path, 'a') { |file| file.puts(JSON.generate(payload)) }
           end
         end
       end

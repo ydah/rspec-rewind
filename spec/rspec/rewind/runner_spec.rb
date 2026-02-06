@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-require "spec_helper"
+require 'spec_helper'
 
 RSpec.describe RSpec::Rewind::Runner do
   class FakeExecutionResult
@@ -34,9 +34,9 @@ RSpec.describe RSpec::Rewind::Runner do
       @outcomes = outcomes.dup
       @metadata = metadata
       @run_calls = 0
-      @id = "spec/fake_spec.rb[1:1]"
-      @full_description = "fake example"
-      @location = "spec/fake_spec.rb:1"
+      @id = 'spec/fake_spec.rb[1:1]'
+      @full_description = 'fake example'
+      @location = 'spec/fake_spec.rb:1'
       @execution_result = FakeExecutionResult.new
       @example_group_instance = FakeExampleGroupInstance.new
       @exception = nil
@@ -87,9 +87,9 @@ RSpec.describe RSpec::Rewind::Runner do
     [runner, example, config]
   end
 
-  it "retries and eventually passes" do
+  it 'retries and eventually passes' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2 }
     )
 
@@ -100,9 +100,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.example_group_instance.clear_lets_calls).to eq(1)
   end
 
-  it "does not retry when skip list matches" do
+  it 'does not retry when skip list matches' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("fatal"), nil],
+      outcomes: [RuntimeError.new('fatal'), nil],
       metadata: { rewind: 2, rewind_skip_on: [RuntimeError] }
     )
 
@@ -111,9 +111,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
-  it "respects retry budget" do
+  it 'respects retry budget' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
       metadata: { rewind: 3 },
       configure: lambda do |config|
         config.retry_budget = 1
@@ -125,11 +125,11 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "records flaky example once it passes after a retry" do
+  it 'records flaky example once it passes after a retry' do
     reporter = CollectingReporter.new
 
     runner, = build_runner(
-      outcomes: [RuntimeError.new("flaky"), nil],
+      outcomes: [RuntimeError.new('flaky'), nil],
       metadata: { rewind: 2 },
       configure: lambda do |config|
         config.flaky_reporter = reporter
@@ -146,11 +146,11 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(event.attempt).to eq(2)
   end
 
-  it "sleeps between retries when a backoff strategy is given" do
+  it 'sleeps between retries when a backoff strategy is given' do
     allow(Kernel).to receive(:sleep)
 
     runner, = build_runner(
-      outcomes: [RuntimeError.new("temporary"), nil],
+      outcomes: [RuntimeError.new('temporary'), nil],
       metadata: { rewind: 2 }
     )
 
@@ -159,9 +159,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(Kernel).to have_received(:sleep).with(0.5)
   end
 
-  it "does not retry when retry_on does not match the exception" do
+  it 'does not retry when retry_on does not match the exception' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2, rewind_retry_on: [IOError] }
     )
 
@@ -170,9 +170,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
-  it "supports rewind_skip_retry_on metadata alias" do
+  it 'supports rewind_skip_retry_on metadata alias' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2, rewind_skip_retry_on: [RuntimeError] }
     )
 
@@ -181,9 +181,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
-  it "prefers rewind_skip_retry_on over rewind_skip_on when both are present" do
+  it 'prefers rewind_skip_retry_on over rewind_skip_on when both are present' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: {
         rewind: 2,
         rewind_skip_retry_on: [IOError],
@@ -196,9 +196,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "uses explicit retries argument before metadata and config defaults" do
+  it 'uses explicit retries argument before metadata and config defaults' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
       metadata: { rewind: 3 },
       configure: lambda do |config|
         config.default_retries = 5
@@ -210,9 +210,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "uses metadata rewind before configuration default" do
+  it 'uses metadata rewind before configuration default' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
       metadata: { rewind: 1 },
       configure: lambda do |config|
         config.default_retries = 5
@@ -224,9 +224,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "uses metadata retry alias before configuration default" do
+  it 'uses metadata retry alias before configuration default' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
       metadata: { retry: 1 },
       configure: lambda do |config|
         config.default_retries = 5
@@ -238,9 +238,9 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "uses configuration default when no override is provided" do
+  it 'uses configuration default when no override is provided' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), RuntimeError.new("b"), nil],
+      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
       configure: lambda do |config|
         config.default_retries = 1
       end
@@ -251,12 +251,12 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "uses RSPEC_REWIND_RETRIES env var before explicit retries" do
-    original = ENV["RSPEC_REWIND_RETRIES"]
-    ENV["RSPEC_REWIND_RETRIES"] = "0"
+  it 'uses RSPEC_REWIND_RETRIES env var before explicit retries' do
+    original = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
+    ENV['RSPEC_REWIND_RETRIES'] = '0'
 
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("a"), nil],
+      outcomes: [RuntimeError.new('a'), nil],
       metadata: { rewind: 3 }
     )
 
@@ -264,24 +264,24 @@ RSpec.describe RSpec::Rewind::Runner do
 
     expect(example.run_calls).to eq(1)
   ensure
-    ENV["RSPEC_REWIND_RETRIES"] = original
+    ENV['RSPEC_REWIND_RETRIES'] = original
   end
 
-  it "raises when RSPEC_REWIND_RETRIES is invalid" do
-    original = ENV["RSPEC_REWIND_RETRIES"]
-    ENV["RSPEC_REWIND_RETRIES"] = "many"
+  it 'raises when RSPEC_REWIND_RETRIES is invalid' do
+    original = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
+    ENV['RSPEC_REWIND_RETRIES'] = 'many'
     runner, = build_runner(outcomes: [nil], metadata: {})
 
     expect do
       runner.run(retries: 2)
     end.to raise_error(ArgumentError, /RSPEC_REWIND_RETRIES must be a non-negative integer/)
   ensure
-    ENV["RSPEC_REWIND_RETRIES"] = original
+    ENV['RSPEC_REWIND_RETRIES'] = original
   end
 
-  it "does not clear lets when clear_lets_on_failure is false" do
+  it 'does not clear lets when clear_lets_on_failure is false' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2 },
       configure: lambda do |config|
         config.clear_lets_on_failure = false
@@ -293,11 +293,11 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.example_group_instance.clear_lets_calls).to eq(0)
   end
 
-  it "invokes retry_callback with retrying event" do
+  it 'invokes retry_callback with retrying event' do
     callback_events = []
 
     runner, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2 },
       configure: lambda do |config|
         config.retry_callback = ->(event) { callback_events << event }
@@ -314,12 +314,12 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(event.attempt).to eq(1)
   end
 
-  it "swallows exceptions raised by retry_callback" do
+  it 'swallows exceptions raised by retry_callback' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2 },
       configure: lambda do |config|
-        config.retry_callback = ->(_event) { raise "callback failed" }
+        config.retry_callback = ->(_event) { raise 'callback failed' }
       end
     )
 
@@ -327,15 +327,15 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "raises when retries is negative" do
+  it 'raises when retries is negative' do
     runner, = build_runner(outcomes: [nil], metadata: {})
 
     expect { runner.run(retries: -1) }.to raise_error(ArgumentError, /retries must be >= 0/)
   end
 
-  it "retries when the example raises and then passes" do
+  it 'retries when the example raises and then passes' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("boom"), nil],
+      outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2 },
       example_class: FakeRaisingExample
     )
@@ -344,14 +344,14 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it "re-raises the final exception when retries are exhausted" do
+  it 're-raises the final exception when retries are exhausted' do
     runner, example, = build_runner(
-      outcomes: [RuntimeError.new("first"), RuntimeError.new("last")],
+      outcomes: [RuntimeError.new('first'), RuntimeError.new('last')],
       metadata: { rewind: 1 },
       example_class: FakeRaisingExample
     )
 
-    expect { runner.run }.to raise_error(RuntimeError, "last")
+    expect { runner.run }.to raise_error(RuntimeError, 'last')
     expect(example.run_calls).to eq(2)
   end
 end

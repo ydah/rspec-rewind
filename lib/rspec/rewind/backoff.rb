@@ -6,13 +6,13 @@ module RSpec
       module_function
 
       def fixed(seconds)
-        value = normalize_numeric(seconds, "seconds")
+        value = normalize_numeric(seconds, 'seconds')
         ->(**_) { value }
       end
 
       def linear(step:, max: nil)
-        step_value = normalize_numeric(step, "step")
-        max_value = max.nil? ? nil : normalize_numeric(max, "max")
+        step_value = normalize_numeric(step, 'step')
+        max_value = max.nil? ? nil : normalize_numeric(max, 'max')
 
         lambda do |retry_number:, **_|
           delay = step_value * retry_number.to_i
@@ -21,10 +21,10 @@ module RSpec
       end
 
       def exponential(base:, factor: 2.0, max: nil, jitter: 0.0)
-        base_value = normalize_numeric(base, "base")
-        factor_value = normalize_numeric(factor, "factor")
-        jitter_value = normalize_numeric(jitter, "jitter")
-        max_value = max.nil? ? nil : normalize_numeric(max, "max")
+        base_value = normalize_numeric(base, 'base')
+        factor_value = normalize_numeric(factor, 'factor')
+        jitter_value = normalize_numeric(jitter, 'jitter')
+        max_value = max.nil? ? nil : normalize_numeric(max, 'max')
 
         lambda do |retry_number:, **_|
           exponent = [retry_number.to_i - 1, 0].max

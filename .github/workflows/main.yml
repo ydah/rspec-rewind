@@ -28,5 +28,24 @@ jobs:
         with:
           ruby-version: ${{ matrix.ruby }}
           bundler-cache: true
-      - name: Run the default task
-        run: bundle exec rake
+      - name: Run specs
+        run: bundle exec rake spec
+
+  quality:
+    runs-on: ubuntu-latest
+    name: Quality
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Lint
+        run: bundle exec rake rubocop
+      - name: Coverage
+        run: COVERAGE=1 bundle exec rspec
+      - name: Build gem
+        run: bundle exec rake build

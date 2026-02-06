@@ -2,6 +2,6 @@
 
 module RSpec
   module Rewind
-    VERSION = "0.1.0"
+    VERSION = '0.1.0'
   end
 end

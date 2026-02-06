@@ -1,33 +1,33 @@
 # frozen_string_literal: true
 
-require "spec_helper"
-require "open3"
-require "tmpdir"
-require "rbconfig"
+require 'spec_helper'
+require 'open3'
+require 'tmpdir'
+require 'rbconfig'
 
-RSpec.describe "RSpec::Rewind integration" do
-  let(:lib_path) { File.expand_path("../../../lib", __dir__) }
+RSpec.describe RSpec::Rewind do
+  let(:lib_path) { File.expand_path('../../../lib', __dir__) }
 
   def run_temp_rspec(example_source, env: {})
-    Dir.mktmpdir("rspec-rewind-integration") do |dir|
-      spec_path = File.join(dir, "integration_spec.rb")
+    Dir.mktmpdir('rspec-rewind-integration') do |dir|
+      spec_path = File.join(dir, 'integration_spec.rb')
       File.write(spec_path, example_source)
 
       Open3.capture3(
         env,
         RbConfig.ruby,
-        "-S",
-        "rspec",
-        "--options",
-        "/dev/null",
+        '-S',
+        'rspec',
+        '--options',
+        File::NULL,
         spec_path,
-        "--format",
-        "progress"
+        '--format',
+        'progress'
       )
     end
   end
 
-  it "retries failing examples through the installed around hook" do
+  it 'retries failing examples through the installed around hook' do
     source = <<~RUBY
       # frozen_string_literal: true
 
@@ -51,11 +51,11 @@ RSpec.describe "RSpec::Rewind integration" do
 
     aggregate_failures do
       expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
-      expect(stdout).to include("1 example, 0 failures")
+      expect(stdout).to include('1 example, 0 failures')
     end
   end
 
-  it "does not retry when rewind: false disables the hook" do
+  it 'does not retry when rewind: false disables the hook' do
     source = <<~RUBY
       # frozen_string_literal: true
 
@@ -79,11 +79,11 @@ RSpec.describe "RSpec::Rewind integration" do
 
     aggregate_failures do
       expect(status.success?).to be(false), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
-      expect(stdout).to include("1 example, 1 failure")
+      expect(stdout).to include('1 example, 1 failure')
     end
   end
 
-  it "does not retry when retry: false disables compatibility path" do
+  it 'does not retry when retry: false disables compatibility path' do
     source = <<~RUBY
       # frozen_string_literal: true
 
@@ -107,7 +107,7 @@ RSpec.describe "RSpec::Rewind integration" do
 
     aggregate_failures do
       expect(status.success?).to be(false), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
-      expect(stdout).to include("1 example, 1 failure")
+      expect(stdout).to include('1 example, 1 failure')
     end
   end
 end

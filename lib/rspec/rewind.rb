@@ -1,17 +1,17 @@
 # frozen_string_literal: true
 
-require "rspec/core"
-require "time"
+require 'rspec/core'
+require 'time'
 
-require_relative "rewind/version"
-require_relative "rewind/backoff"
-require_relative "rewind/retry_budget"
-require_relative "rewind/flaky_reporter"
-require_relative "rewind/configuration"
-require_relative "rewind/event"
-require_relative "rewind/retry_decision"
-require_relative "rewind/runner"
-require_relative "rewind/example_methods"
+require_relative 'rewind/version'
+require_relative 'rewind/backoff'
+require_relative 'rewind/retry_budget'
+require_relative 'rewind/flaky_reporter'
+require_relative 'rewind/configuration'
+require_relative 'rewind/event'
+require_relative 'rewind/retry_decision'
+require_relative 'rewind/runner'
+require_relative 'rewind/example_methods'
 
 module RSpec
   module Rewind
@@ -32,9 +32,7 @@ module RSpec
         return if @installed
 
         ::RSpec::Core::Example.include(ExampleMethods)
-        if defined?(::RSpec::Core::Example::Procsy)
-          ::RSpec::Core::Example::Procsy.include(ExampleMethods)
-        end
+        ::RSpec::Core::Example::Procsy.include(ExampleMethods) if defined?(::RSpec::Core::Example::Procsy)
 
         ::RSpec.configure do |config|
           config.around(:each) do |example|

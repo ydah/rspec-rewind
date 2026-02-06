@@ -3,7 +3,7 @@
 module RSpec
   module Rewind
     class Runner
-      ENV_RETRIES_KEY = "RSPEC_REWIND_RETRIES"
+      ENV_RETRIES_KEY = 'RSPEC_REWIND_RETRIES'
 
       def initialize(example:, configuration:)
         @example = example
@@ -28,17 +28,21 @@ module RSpec
           retry_number = attempt
           unless retry_number <= resolved_retries
             raise exception if raised
+
             return
           end
 
-          unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on, retry_if: retry_if)
+          unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on,
+                                retry_if: retry_if)
             raise exception if raised
+
             return
           end
 
           unless @configuration.retry_budget.consume!
             debug("retry budget exhausted for #{example_id}")
             raise exception if raised
+
             return
           end
 
@@ -97,7 +101,7 @@ module RSpec
           @configuration.default_retries
         )
 
-        parse_non_negative_integer(configured, source: "retries")
+        parse_non_negative_integer(configured, source: 'retries')
       end
 
       def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)
@@ -263,10 +267,10 @@ module RSpec
         parsed = begin
           Float(value)
         rescue TypeError, ArgumentError
-          raise ArgumentError, "delay must be numeric"
+          raise ArgumentError, 'delay must be numeric'
         end
 
-        raise ArgumentError, "delay must be >= 0" if parsed.negative?
+        raise ArgumentError, 'delay must be >= 0' if parsed.negative?
 
         parsed
       end
@@ -303,7 +307,7 @@ module RSpec
 
       def example_id
         source = example_source
-        source.respond_to?(:id) ? source.id : "unknown"
+        source.respond_to?(:id) ? source.id : 'unknown'
       end
 
       def fatal_exception?(exception)
@@ -317,7 +321,7 @@ module RSpec
       def reporter_message(message)
         if defined?(::RSpec) && ::RSpec.respond_to?(:configuration)
           reporter = ::RSpec.configuration.reporter
-          reporter.message(message) if reporter
+          reporter&.message(message)
         end
       rescue StandardError
         warn(message)

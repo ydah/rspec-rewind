@@ -1,6 +1,6 @@
 # rspec-rewind
 
-[![CI](https://github.com/ydah/rspec-rewind/actions/workflows/ci.yml/badge.svg)](https://github.com/ydah/rspec-rewind/actions/workflows/ci.yml)
+[![CI](https://github.com/ydah/rspec-rewind/actions/workflows/main.yml/badge.svg)](https://github.com/ydah/rspec-rewind/actions/workflows/main.yml)
 
 `rspec-rewind` is a modern retry orchestration gem for RSpec.
 It was inspired by [`rspec-retry`](https://github.com/NoRedInk/rspec-retry), but focuses on deterministic control and flaky-test observability.
@@ -122,5 +122,7 @@ bundle exec rspec
 
 CI runs on every push and pull request, and validates:
 
-- Specs across Ruby 3.0-3.4
+- Specs across Ruby 3.1, 3.2, 3.3, 3.4, 4.0 and head
+- Linting (`rake rubocop`)
+- Coverage threshold (`COVERAGE=1 rspec`)
 - Gem packaging (`rake build`)
