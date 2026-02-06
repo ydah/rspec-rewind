@@ -68,6 +68,14 @@ RSpec.describe RSpec::Rewind::Configuration do
       end.to raise_error(ArgumentError, /backoff must be a non-negative numeric value or callable/)
     end
 
+    it 'accepts numeric backoff values' do
+      config = described_class.new
+
+      config.backoff = 0.25
+
+      expect(config.backoff).to eq(0.25)
+    end
+
     it 'raises when callbacks are not callable' do
       config = described_class.new
 

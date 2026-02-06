@@ -111,7 +111,7 @@ Each entry contains:
 
 ## Compatibility notes
 
-- Ruby `>= 3.0`
+- Ruby `>= 3.1`
 - RSpec Core `>= 3.12`, `< 4.0`
 
 ## Development

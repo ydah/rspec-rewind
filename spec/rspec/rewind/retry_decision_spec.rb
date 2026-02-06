@@ -77,6 +77,38 @@ RSpec.describe RSpec::Rewind::RetryDecision do
     expect(decision.retry?).to be(true)
   end
 
+  it 'supports variadic retry_if predicates' do
+    decision = described_class.new(
+      exception: RuntimeError.new('temporary'),
+      example: example,
+      retry_on: [],
+      skip_retry_on: [],
+      retry_if: proc { |*args| args[0].message == 'temporary' && args[1].equal?(example) }
+    )
+
+    expect(decision.retry?).to be(true)
+  end
+
+  it 'supports callable objects that do not implement arity' do
+    seen = nil
+    matcher = Object.new
+    matcher.define_singleton_method(:call) do |exception, ex|
+      seen = [exception, ex]
+      true
+    end
+
+    decision = described_class.new(
+      exception: RuntimeError.new('temporary'),
+      example: example,
+      retry_on: [matcher],
+      skip_retry_on: [],
+      retry_if: nil
+    )
+
+    expect(decision.retry?).to be(true)
+    expect(seen.last).to be(example)
+  end
+
   it 'treats matcher errors as non-match' do
     decision = described_class.new(
       exception: RuntimeError.new('boom'),

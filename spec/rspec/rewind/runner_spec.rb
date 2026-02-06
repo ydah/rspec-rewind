@@ -159,6 +159,17 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(Kernel).to have_received(:sleep).with(0.5)
   end
 
+  it 'raises when backoff resolves to non-numeric delay' do
+    runner, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 }
+    )
+
+    expect do
+      runner.run(backoff: ->(**_) { :invalid })
+    end.to raise_error(ArgumentError, /delay must be numeric/)
+  end
+
   it 'does not retry when retry_on does not match the exception' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('boom'), nil],
@@ -168,6 +179,32 @@ RSpec.describe RSpec::Rewind::Runner do
     runner.run
 
     expect(example.run_calls).to eq(1)
+  end
+
+  it 'clears exception ivar when clear_exception is unavailable' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 }
+    )
+    example.singleton_class.undef_method(:clear_exception)
+
+    runner.run
+
+    expect(example.exception).to be_nil
+  end
+
+  it 'clears legacy memoized lets ivar when clear_lets is unavailable' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 }
+    )
+    legacy_group = Object.new
+    legacy_group.instance_variable_set(:@__memoized, { value: 1 })
+    example.instance_variable_set(:@example_group_instance, legacy_group)
+
+    runner.run
+
+    expect(legacy_group.instance_variable_get(:@__memoized)).to be_nil
   end
 
   it 'supports rewind_skip_retry_on metadata alias' do
@@ -312,6 +349,64 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(event.status).to eq(:retrying)
     expect(event.retry_reason).to eq(:exception)
     expect(event.attempt).to eq(1)
+  end
+
+  it 'swallows exceptions raised by flaky_reporter' do
+    failing_reporter = Class.new do
+      def record(_event)
+        raise 'report failed'
+      end
+    end.new
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: lambda do |config|
+        config.flaky_reporter = failing_reporter
+      end
+    )
+
+    expect { runner.run }.not_to raise_error
+    expect(example.run_calls).to eq(2)
+  end
+
+  it 'displays retry failure messages when enabled' do
+    allow(RSpec.configuration.reporter).to receive(:message)
+    runner, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: lambda do |config|
+        config.display_retry_failure_messages = true
+      end
+    )
+
+    runner.run
+
+    expect(RSpec.configuration.reporter).to have_received(:message).with(include('RuntimeError: boom'))
+  end
+
+  it 'emits debug messages when verbose is enabled' do
+    allow(RSpec.configuration.reporter).to receive(:message)
+    runner, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: lambda do |config|
+        config.verbose = true
+      end
+    )
+
+    runner.run
+
+    expect(RSpec.configuration.reporter).to have_received(:message).with(match(%r{\[rspec-rewind\] retry 1/1}))
+  end
+
+  it 'falls back to warn when reporter messaging fails' do
+    runner, = build_runner(outcomes: [nil], metadata: {})
+    allow(RSpec.configuration.reporter).to receive(:message).and_raise(StandardError, 'boom')
+    allow(runner).to receive(:warn)
+
+    runner.send(:reporter_message, '[rspec-rewind] hello')
+
+    expect(runner).to have_received(:warn).with('[rspec-rewind] hello')
   end
 
   it 'swallows exceptions raised by retry_callback' do
