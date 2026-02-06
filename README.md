@@ -63,6 +63,7 @@ end
 
 `rewind_skip_retry_on` is the preferred key. `rewind_skip_on` is still accepted as a legacy alias.
 Callable filters can accept either `(exception)` or `(exception, example)`.
+`rewind: true` and `retry: true` can be used as enable flags (retry count falls back to defaults).
 
 ## Configuration reference
 
