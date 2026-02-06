@@ -303,6 +303,48 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
+  it 'treats metadata rewind: false as zero retries' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: false },
+      configure: lambda do |config|
+        config.default_retries = 3
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(1)
+  end
+
+  it 'treats metadata retry: false as zero retries' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { retry: false },
+      configure: lambda do |config|
+        config.default_retries = 3
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(1)
+  end
+
+  it 'prefers metadata rewind over metadata retry when both are set' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: false, retry: 2 },
+      configure: lambda do |config|
+        config.default_retries = 3
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(1)
+  end
+
   it 'uses configuration default when no override is provided' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
