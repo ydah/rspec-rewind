@@ -32,27 +32,15 @@ module RSpec
             return
           end
 
-          sleep_seconds = retry_delay_resolver.resolve(
+          retry_transition.perform(
             retry_number: retry_number,
+            resolved_retries: resolved_retries,
+            duration: duration,
+            exception: exception,
             backoff: backoff,
             wait: wait,
-            exception: exception
+            example_source: example_source
           )
-
-          event = build_event(
-            status: :retrying,
-            retry_reason: :exception,
-            attempt: retry_number,
-            retries: resolved_retries,
-            duration: duration,
-            sleep_seconds: sleep_seconds,
-            exception: exception
-          )
-
-          notifier.notify_retry(event)
-          notifier.show_failure_message(exception) if @configuration.display_retry_failure_messages
-          clear_for_retry
-          sleep_if_needed(sleep_seconds)
 
           attempt += 1
         end
@@ -72,16 +60,6 @@ module RSpec
         )
 
         notifier.publish_flaky(event)
-      end
-
-      def clear_for_retry
-        state_resetter.reset(example_source)
-      end
-
-      def sleep_if_needed(seconds)
-        return unless seconds.positive?
-
-        Kernel.sleep(seconds)
       end
 
       def build_event(status:, retry_reason:, attempt:, retries:, duration:, sleep_seconds:, exception:)
@@ -148,6 +126,17 @@ module RSpec
 
       def attempt_runner
         @attempt_runner ||= AttemptRunner.new
+      end
+
+      def retry_transition
+        @retry_transition ||= RetryTransition.new(
+          configuration: @configuration,
+          retry_delay_resolver: retry_delay_resolver,
+          event_builder: event_builder,
+          notifier: notifier,
+          state_resetter: state_resetter,
+          sleep: Kernel.method(:sleep)
+        )
       end
 
       def retry_count_resolver
