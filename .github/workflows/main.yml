@@ -41,6 +41,44 @@ jobs:
       - name: Run specs
         run: bundle exec rake spec
 
+  compatibility:
+    runs-on: ubuntu-latest
+    name: Compatibility (RSpec 3.12)
+    timeout-minutes: 15
+    env:
+      BUNDLE_GEMFILE: gemfiles/rspec_3_12.gemfile
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.1"
+          bundler-cache: true
+      - name: Verify minimum supported RSpec
+        run: bundle exec rspec
+
+  dependency-security:
+    runs-on: ubuntu-latest
+    name: Dependency Security
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Generate lockfile for audit
+        run: bundle lock
+      - name: Install bundler-audit
+        run: gem install bundler-audit --no-document
+      - name: Audit dependencies
+        run: bundle-audit check --update
+
   quality:
     runs-on: ubuntu-latest
     name: Quality

@@ -38,7 +38,7 @@ module RSpec
       end
 
       def metadata_skip_retry_on
-        first_non_nil(@metadata[:rewind_skip_retry_on], @metadata[:rewind_skip_on])
+        @metadata[:rewind_skip_retry_on]
       end
 
       def normalize_matchers(values)

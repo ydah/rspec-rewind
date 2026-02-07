@@ -21,7 +21,7 @@ RSpec.describe RSpec::Rewind::Runner do
   it 'does not retry when skip list matches' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('fatal'), nil],
-      metadata: { rewind: 2, rewind_skip_on: [RuntimeError] }
+      metadata: { rewind: 2, rewind_skip_retry_on: [RuntimeError] }
     )
 
     runner.run
@@ -76,7 +76,7 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
-  it 'supports rewind_skip_retry_on metadata alias' do
+  it 'supports rewind_skip_retry_on metadata key' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('boom'), nil],
       metadata: { rewind: 2, rewind_skip_retry_on: [RuntimeError] }
@@ -85,21 +85,6 @@ RSpec.describe RSpec::Rewind::Runner do
     runner.run
 
     expect(example.run_calls).to eq(1)
-  end
-
-  it 'prefers rewind_skip_retry_on over rewind_skip_on when both are present' do
-    runner, example, = build_runner(
-      outcomes: [RuntimeError.new('boom'), nil],
-      metadata: {
-        rewind: 2,
-        rewind_skip_retry_on: [IOError],
-        rewind_skip_on: [RuntimeError]
-      }
-    )
-
-    runner.run
-
-    expect(example.run_calls).to eq(2)
   end
 
   it 'uses explicit retries argument before metadata and config defaults' do

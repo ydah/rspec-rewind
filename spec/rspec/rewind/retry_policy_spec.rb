@@ -27,26 +27,8 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
     expect(allowed).to be(true)
   end
 
-  it 'prefers rewind_skip_retry_on over rewind_skip_on' do
-    policy = build_policy(
-      metadata: {
-        rewind_skip_retry_on: [IOError],
-        rewind_skip_on: [RuntimeError]
-      }
-    )
-
-    allowed = policy.retry_allowed?(
-      exception: RuntimeError.new('boom'),
-      retry_on: [RuntimeError],
-      skip_retry_on: nil,
-      retry_if: nil
-    )
-
-    expect(allowed).to be(true)
-  end
-
-  it 'uses legacy rewind_skip_on when preferred key is absent' do
-    policy = build_policy(metadata: { rewind_skip_on: [RuntimeError] })
+  it 'uses rewind_skip_retry_on metadata key' do
+    policy = build_policy(metadata: { rewind_skip_retry_on: [RuntimeError] })
 
     allowed = policy.retry_allowed?(
       exception: RuntimeError.new('boom'),

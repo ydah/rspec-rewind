@@ -61,7 +61,7 @@ it "retries only transient HTTP failures",
 end
 ```
 
-`rewind_skip_retry_on` is the preferred key. `rewind_skip_on` is still accepted as a legacy alias.
+Use `rewind_skip_retry_on` for skip filters.
 Callable filters can accept either `(exception)` or `(exception, example)`.
 `rewind: true` and `retry: true` can be used as enable flags (retry count falls back to defaults).
 `rewind: false` and `retry: false` disable retries for that example.
@@ -125,6 +125,8 @@ bundle exec rspec
 CI runs on every push and pull request, and validates:
 
 - Specs across Ruby 3.1, 3.2, 3.3, 3.4, 4.0 and head
+- Minimum compatibility against RSpec 3.12 (`BUNDLE_GEMFILE=gemfiles/rspec_3_12.gemfile`)
 - Linting (`rake rubocop`)
 - Coverage threshold (`COVERAGE=1 rspec`)
 - Gem packaging (`rake build`)
+- Dependency security audit (`bundler-audit`)
