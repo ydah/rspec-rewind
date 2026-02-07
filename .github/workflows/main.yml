@@ -94,6 +94,8 @@ jobs:
           bundler-cache: true
       - name: Lint
         run: bundle exec rake rubocop
+      - name: Type signatures
+        run: bundle exec rake rbs
       - name: Coverage
         run: COVERAGE=1 bundle exec rspec
       - name: Build gem

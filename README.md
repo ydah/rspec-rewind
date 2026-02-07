@@ -120,6 +120,7 @@ Each entry contains:
 
 ```bash
 bundle exec rspec
+bundle exec rake rbs
 ```
 
 CI runs on every push and pull request, and validates:
@@ -127,6 +128,7 @@ CI runs on every push and pull request, and validates:
 - Specs across Ruby 3.1, 3.2, 3.3, 3.4, 4.0 and head
 - Minimum compatibility against RSpec 3.12 (`BUNDLE_GEMFILE=gemfiles/rspec_3_12.gemfile`)
 - Linting (`rake rubocop`)
+- Type signature validation (`rake rbs`)
 - Coverage threshold (`COVERAGE=1 rspec`)
 - Gem packaging (`rake build`)
 - Dependency security audit (`bundler-audit`)

@@ -7,4 +7,9 @@ RSpec::Core::RakeTask.new(:spec)
 require 'rubocop/rake_task'
 RuboCop::RakeTask.new(:rubocop)
 
-task default: %i[spec rubocop]
+desc 'Validate RBS signatures'
+task :rbs do
+  sh 'bundle exec rbs validate'
+end
+
+task default: %i[spec rubocop rbs]
