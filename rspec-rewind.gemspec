@@ -25,9 +25,11 @@ Gem::Specification.new do |spec|
   }
 
   spec.files = Dir.chdir(__dir__) do
-    Dir.glob('{lib,spec}/**/*', File::FNM_DOTMATCH).reject do |path|
+    code_and_signatures = Dir.glob('{lib,sig}/**/*', File::FNM_DOTMATCH).reject do |path|
       path.include?('/.') || File.directory?(path)
-    end + %w[Gemfile Rakefile README.md rspec-rewind.gemspec]
+    end
+
+    code_and_signatures + %w[CHANGELOG.md LICENSE.txt README.md rspec-rewind.gemspec]
   end
 
   spec.require_paths = ['lib']
