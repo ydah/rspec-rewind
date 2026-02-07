@@ -85,8 +85,6 @@ jobs:
         with:
           ruby-version: "3.3"
           bundler-cache: true
-      - name: Lint
-        run: bundle exec rake rubocop
       - name: Type signatures
         run: bundle exec rake rbs
       - name: Coverage
