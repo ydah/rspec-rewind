@@ -86,6 +86,13 @@ module RSpec
       attr_accessor timestamp: String
     end
 
+    class ExampleContext
+      def initialize: (example: untyped) -> void
+      def source: () -> untyped
+      def metadata: () -> Hash[Symbol, untyped]
+      def id: () -> String
+    end
+
     module ExampleMethods
       def run_with_rewind: (?Hash[Symbol | String, untyped]) -> void
     end
@@ -164,8 +171,7 @@ module RSpec
       def initialize: (
         example: untyped,
         configuration: Configuration,
-        example_source: untyped,
-        metadata: Hash[Symbol, untyped]?,
+        context: ExampleContext,
         debug: untyped,
         reporter_message: untyped
       ) -> void

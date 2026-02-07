@@ -6,6 +6,7 @@ module RSpec
       def initialize(example:, configuration:)
         @example = example
         @configuration = configuration
+        @context = ExampleContext.new(example: example)
       end
 
       def run(retries: nil, backoff: nil, wait: nil, retry_on: nil, skip_retry_on: nil, retry_if: nil)
@@ -18,7 +19,7 @@ module RSpec
         while attempt <= total_attempts
           exception, duration, raised = components.attempt_runner.run(
             run_target: @example,
-            exception_source: example_source
+            exception_source: @context.source
           )
 
           if exception.nil?
@@ -36,7 +37,7 @@ module RSpec
             retry_on: retry_on,
             skip_retry_on: skip_retry_on,
             retry_if: retry_if,
-            example_id: example_id
+            example_id: @context.id
           )
             raise exception if raised
 
@@ -50,7 +51,7 @@ module RSpec
             exception: exception,
             backoff: backoff,
             wait: wait,
-            example_source: example_source
+            example_source: @context.source
           )
 
           attempt += 1
@@ -59,30 +60,11 @@ module RSpec
 
       private
 
-      def example_source
-        return @example.example if @example.respond_to?(:example) && @example.example
-
-        @example
-      end
-
-      def example_metadata
-        source = example_source
-        return {} unless source.respond_to?(:metadata)
-
-        source.metadata || {}
-      end
-
-      def example_id
-        source = example_source
-        source.respond_to?(:id) ? source.id : 'unknown'
-      end
-
       def components
         @components ||= RunnerComponents.new(
           example: @example,
           configuration: @configuration,
-          example_source: example_source,
-          metadata: example_metadata,
+          context: @context,
           debug: method(:debug),
           reporter_message: method(:reporter_message)
         )

@@ -9,12 +9,12 @@ RSpec.describe RSpec::Rewind::RunnerComponents do
   it 'builds all collaborators for runner orchestration' do
     configuration = RSpec::Rewind::Configuration.new
     example = RunnerSpecSupport::FakeExample.new(outcomes: [nil], metadata: { rewind: 1 })
+    context = RSpec::Rewind::ExampleContext.new(example: example)
 
     components = described_class.new(
       example: example,
       configuration: configuration,
-      example_source: example,
-      metadata: example.metadata,
+      context: context,
       debug: ->(_message) {},
       reporter_message: ->(_message) {}
     )
