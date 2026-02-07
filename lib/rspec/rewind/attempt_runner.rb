@@ -18,7 +18,7 @@ module RSpec
           run_target.run
           duration = monotonic_time - started_at
           [current_exception(exception_source), duration, false]
-        rescue Exception => e # rubocop:disable Lint/RescueException
+        rescue Exception => e
           raise if fatal_exception?(e)
 
           duration = monotonic_time - started_at
