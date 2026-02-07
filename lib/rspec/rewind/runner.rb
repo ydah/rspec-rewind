@@ -16,7 +16,7 @@ module RSpec
         attempt = 1
 
         while attempt <= total_attempts
-          exception, duration, raised = run_attempt
+          exception, duration, raised = attempt_runner.run(run_target: @example, exception_source: example_source)
 
           if exception.nil?
             publish_flaky_event(attempt: attempt, retries: resolved_retries, duration: duration) if attempt > 1
@@ -60,21 +60,6 @@ module RSpec
 
       private
 
-      def run_attempt
-        started_at = monotonic_time
-
-        begin
-          @example.run
-          duration = monotonic_time - started_at
-          [current_exception, duration, false]
-        rescue Exception => e # rubocop:disable Lint/RescueException
-          raise if fatal_exception?(e)
-
-          duration = monotonic_time - started_at
-          [e, duration, true]
-        end
-      end
-
       def publish_flaky_event(attempt:, retries:, duration:)
         event = build_event(
           status: :flaky,
@@ -111,19 +96,10 @@ module RSpec
         )
       end
 
-      def monotonic_time
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-
       def example_source
         return @example.example if @example.respond_to?(:example) && @example.example
 
         @example
-      end
-
-      def current_exception
-        source = example_source
-        source.respond_to?(:exception) ? source.exception : nil
       end
 
       def example_metadata
@@ -170,6 +146,10 @@ module RSpec
         )
       end
 
+      def attempt_runner
+        @attempt_runner ||= AttemptRunner.new
+      end
+
       def retry_count_resolver
         @retry_count_resolver ||= RetryCountResolver.new(
           configuration: @configuration,
@@ -183,14 +163,6 @@ module RSpec
           metadata: example_metadata,
           example: @example
         )
-      end
-
-      def fatal_exception?(exception)
-        exception.is_a?(NoMemoryError) ||
-          exception.is_a?(ScriptError) ||
-          exception.is_a?(SignalException) ||
-          exception.is_a?(SystemExit) ||
-          exception.is_a?(SecurityError)
       end
 
       def reporter_message(message)
