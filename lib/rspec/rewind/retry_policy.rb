@@ -3,6 +3,8 @@
 module RSpec
   module Rewind
     class RetryPolicy
+      include MatcherValidation
+
       def initialize(example:, configuration:, metadata:)
         @example = example
         @configuration = configuration
@@ -22,15 +24,15 @@ module RSpec
       private
 
       def effective_retry_on(explicit_retry_on)
-        normalize_matchers(@configuration.retry_on) +
-          normalize_matchers(@metadata[:rewind_retry_on]) +
-          normalize_matchers(explicit_retry_on)
+        normalize_matchers(@configuration.retry_on, field: 'retry_on') +
+          normalize_matchers(@metadata[:rewind_retry_on], field: 'rewind_retry_on') +
+          normalize_matchers(explicit_retry_on, field: 'retry_on')
       end
 
       def effective_skip_retry_on(explicit_skip_retry_on)
-        normalize_matchers(@configuration.skip_retry_on) +
-          normalize_matchers(metadata_skip_retry_on) +
-          normalize_matchers(explicit_skip_retry_on)
+        normalize_matchers(@configuration.skip_retry_on, field: 'skip_retry_on') +
+          normalize_matchers(metadata_skip_retry_on, field: 'rewind_skip_retry_on') +
+          normalize_matchers(explicit_skip_retry_on, field: 'skip_retry_on')
       end
 
       def effective_retry_if(explicit_retry_if)
@@ -39,10 +41,6 @@ module RSpec
 
       def metadata_skip_retry_on
         @metadata[:rewind_skip_retry_on]
-      end
-
-      def normalize_matchers(values)
-        Array(values).flatten.compact
       end
 
       def first_non_nil(*values)

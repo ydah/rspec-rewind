@@ -71,4 +71,30 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
 
     expect(allowed).to be(true)
   end
+
+  it 'raises when explicit retry_on contains unsupported matcher types' do
+    policy = build_policy
+
+    expect do
+      policy.retry_allowed?(
+        exception: RuntimeError.new('boom'),
+        retry_on: [:invalid],
+        skip_retry_on: nil,
+        retry_if: nil
+      )
+    end.to raise_error(ArgumentError, /retry_on entries must be Module, Regexp, or callable/)
+  end
+
+  it 'raises when rewind_skip_retry_on metadata contains unsupported matcher types' do
+    policy = build_policy(metadata: { rewind_skip_retry_on: [123] })
+
+    expect do
+      policy.retry_allowed?(
+        exception: RuntimeError.new('boom'),
+        retry_on: [RuntimeError],
+        skip_retry_on: nil,
+        retry_if: nil
+      )
+    end.to raise_error(ArgumentError, /rewind_skip_retry_on entries must be Module, Regexp, or callable/)
+  end
 end

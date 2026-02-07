@@ -3,6 +3,8 @@
 module RSpec
   module Rewind
     class Configuration
+      include MatcherValidation
+
       attr_reader :default_retries, :backoff, :retry_on, :skip_retry_on, :retry_if, :retry_callback, :flaky_callback,
                   :verbose, :display_retry_failure_messages, :clear_lets_on_failure, :retry_budget, :flaky_reporter
 
@@ -103,18 +105,6 @@ module RSpec
         return value if value.respond_to?(:call)
 
         raise ArgumentError, 'backoff must be a non-negative numeric value or callable'
-      end
-
-      def normalize_matchers(values, field:)
-        matchers = Array(values).flatten.compact
-        matchers.each { |matcher| validate_matcher!(matcher, field: field) }
-        matchers
-      end
-
-      def validate_matcher!(matcher, field:)
-        return if matcher.is_a?(Module) || matcher.is_a?(Regexp) || matcher.respond_to?(:call)
-
-        raise ArgumentError, "#{field} entries must be Module, Regexp, or callable"
       end
 
       def normalize_callable(callable, field:)
