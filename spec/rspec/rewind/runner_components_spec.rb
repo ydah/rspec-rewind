@@ -10,13 +10,13 @@ RSpec.describe RSpec::Rewind::RunnerComponents do
     configuration = RSpec::Rewind::Configuration.new
     example = RunnerSpecSupport::FakeExample.new(outcomes: [nil], metadata: { rewind: 1 })
     context = RSpec::Rewind::ExampleContext.new(example: example)
+    logger = RSpec::Rewind::RunnerLogger.new(configuration: configuration, warn_output: ->(_message) {})
 
     components = described_class.new(
       example: example,
       configuration: configuration,
       context: context,
-      debug: ->(_message) {},
-      reporter_message: ->(_message) {}
+      logger: logger
     )
 
     expect(components.retry_count_resolver).to be_a(RSpec::Rewind::RetryCountResolver)

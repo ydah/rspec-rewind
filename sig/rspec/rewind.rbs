@@ -161,6 +161,12 @@ module RSpec
       ) -> bool
     end
 
+    class RunnerLogger
+      def initialize: (configuration: Configuration, warn_output: untyped) -> void
+      def reporter_message: (String) -> void
+      def debug: (String) -> void
+    end
+
     class RunnerComponents
       attr_reader retry_count_resolver: RetryCountResolver
       attr_reader attempt_runner: AttemptRunner
@@ -172,8 +178,7 @@ module RSpec
         example: untyped,
         configuration: Configuration,
         context: ExampleContext,
-        debug: untyped,
-        reporter_message: untyped
+        logger: RunnerLogger
       ) -> void
     end
 

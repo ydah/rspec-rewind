@@ -7,6 +7,7 @@ module RSpec
         @example = example
         @configuration = configuration
         @context = ExampleContext.new(example: example)
+        @logger = RunnerLogger.new(configuration: configuration, warn_output: method(:warn))
       end
 
       def run(retries: nil, backoff: nil, wait: nil, retry_on: nil, skip_retry_on: nil, retry_if: nil)
@@ -65,24 +66,8 @@ module RSpec
           example: @example,
           configuration: @configuration,
           context: @context,
-          debug: method(:debug),
-          reporter_message: method(:reporter_message)
+          logger: @logger
         )
-      end
-
-      def reporter_message(message)
-        if defined?(::RSpec) && ::RSpec.respond_to?(:configuration)
-          reporter = ::RSpec.configuration.reporter
-          reporter&.message(message)
-        end
-      rescue StandardError
-        warn(message)
-      end
-
-      def debug(message)
-        return unless @configuration.verbose
-
-        reporter_message("[rspec-rewind] #{message}")
       end
     end
   end

@@ -121,16 +121,6 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(RSpec.configuration.reporter).to have_received(:message).with(match(%r{\[rspec-rewind\] retry 1/1}))
   end
 
-  it 'falls back to warn when reporter messaging fails' do
-    runner, = build_runner(outcomes: [nil], metadata: {})
-    allow(RSpec.configuration.reporter).to receive(:message).and_raise(StandardError, 'boom')
-    allow(runner).to receive(:warn)
-
-    runner.send(:reporter_message, '[rspec-rewind] hello')
-
-    expect(runner).to have_received(:warn).with('[rspec-rewind] hello')
-  end
-
   it 'swallows exceptions raised by retry_callback' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('boom'), nil],
