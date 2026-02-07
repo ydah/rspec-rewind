@@ -1,6 +1,120 @@
 module RSpec
   module Rewind
     VERSION: String
-    # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+    EVENT_SCHEMA_VERSION: Integer
+
+    class << self
+      def configuration: () -> Configuration
+      def configure: () { (Configuration) -> void } -> void
+      def reset_configuration!: () -> Configuration
+      def install!: () -> bool?
+    end
+
+    module Backoff
+      def self.fixed: (Numeric seconds) -> untyped
+      def self.linear: (step: Numeric, ?max: Numeric?) -> untyped
+      def self.exponential: (base: Numeric, ?factor: Numeric, ?max: Numeric?, ?jitter: Numeric) -> untyped
+    end
+
+    class Configuration
+      attr_reader default_retries: Integer
+      attr_reader backoff: Numeric | untyped
+      attr_reader retry_on: Array[untyped]
+      attr_reader skip_retry_on: Array[untyped]
+      attr_reader retry_if: untyped?
+      attr_reader retry_callback: untyped?
+      attr_reader flaky_callback: untyped?
+      attr_reader verbose: bool
+      attr_reader display_retry_failure_messages: bool
+      attr_reader clear_lets_on_failure: bool
+      attr_reader retry_budget: RetryBudget
+      attr_reader flaky_reporter: FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped
+
+      def initialize: () -> void
+      def default_retries=: (untyped) -> Integer
+      def backoff=: (untyped) -> Numeric | untyped
+      def retry_on=: (untyped) -> Array[untyped]
+      def skip_retry_on=: (untyped) -> Array[untyped]
+      def retry_if=: (untyped?) -> untyped?
+      def retry_callback=: (untyped?) -> untyped?
+      def flaky_callback=: (untyped?) -> untyped?
+      def verbose=: (bool) -> bool
+      def display_retry_failure_messages=: (bool) -> bool
+      def clear_lets_on_failure=: (bool) -> bool
+      def retry_budget=: (RetryBudget | untyped) -> RetryBudget
+      def flaky_reporter=: (FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped?) -> FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped
+      def flaky_report_path=: (String?) -> FlakyReporter::NullReporter | FlakyReporter::JsonlReporter
+    end
+
+    class RetryBudget
+      attr_reader limit: Integer?
+      attr_reader used: Integer
+
+      def initialize: (untyped) -> void
+      def consume!: () -> bool
+      def remaining: () -> Integer | Float
+      def unlimited?: () -> bool
+    end
+
+    class FlakyReporter
+      def self.null: () -> NullReporter
+      def self.jsonl: (String path) -> JsonlReporter
+
+      class NullReporter
+        def record: (Event event) -> void
+      end
+
+      class JsonlReporter
+        def initialize: (String path) -> void
+        def record: (Event event) -> void
+      end
+    end
+
+    class Event < ::Struct
+      attr_accessor schema_version: Integer
+      attr_accessor status: Symbol
+      attr_accessor retry_reason: Symbol?
+      attr_accessor example_id: String
+      attr_accessor description: String
+      attr_accessor location: String
+      attr_accessor attempt: Integer
+      attr_accessor retries: Integer
+      attr_accessor exception_class: String?
+      attr_accessor exception_message: String?
+      attr_accessor duration: Numeric
+      attr_accessor sleep_seconds: Numeric
+      attr_accessor timestamp: String
+    end
+
+    module ExampleMethods
+      def run_with_rewind: (?Hash[Symbol | String, untyped]) -> void
+    end
+
+    class RetryDecision
+      def initialize: (exception: Exception?, example: untyped, retry_on: untyped, skip_retry_on: untyped, retry_if: untyped?) -> void
+      def retry?: () -> bool
+    end
+
+    class RetryPolicy
+      def initialize: (example: untyped, configuration: Configuration, metadata: Hash[Symbol, untyped]?) -> void
+      def retry_allowed?: (exception: Exception, retry_on: untyped, skip_retry_on: untyped, retry_if: untyped?) -> bool
+    end
+
+    class RetryCountResolver
+      ENV_RETRIES_KEY: String
+
+      def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?) -> void
+      def resolve: (explicit_retries: untyped) -> Integer
+    end
+
+    class RetryDelayResolver
+      def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?, example: untyped) -> void
+      def resolve: (retry_number: Integer, backoff: untyped, wait: untyped, exception: Exception) -> Float
+    end
+
+    class Runner
+      def initialize: (example: untyped, configuration: Configuration) -> void
+      def run: (?retries: untyped, ?backoff: untyped, ?wait: untyped, ?retry_on: untyped, ?skip_retry_on: untyped, ?retry_if: untyped) -> void
+    end
   end
 end
