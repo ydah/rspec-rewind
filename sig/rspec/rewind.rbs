@@ -112,6 +112,19 @@ module RSpec
       def resolve: (retry_number: Integer, backoff: untyped, wait: untyped, exception: Exception) -> Float
     end
 
+    class RetryGate
+      def initialize: (configuration: Configuration, retry_policy: RetryPolicy, debug: untyped) -> void
+      def allow?: (
+        exception: Exception,
+        retry_number: Integer,
+        resolved_retries: Integer,
+        retry_on: untyped,
+        skip_retry_on: untyped,
+        retry_if: untyped?,
+        example_id: String
+      ) -> bool
+    end
+
     class Runner
       def initialize: (example: untyped, configuration: Configuration) -> void
       def run: (?retries: untyped, ?backoff: untyped, ?wait: untyped, ?retry_on: untyped, ?skip_retry_on: untyped, ?retry_if: untyped) -> void

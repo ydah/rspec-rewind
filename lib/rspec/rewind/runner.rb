@@ -24,9 +24,11 @@ module RSpec
           end
 
           retry_number = attempt
-          unless can_retry_exception?(exception: exception, raised: raised, retry_number: retry_number,
-                                      resolved_retries: resolved_retries, retry_on: retry_on,
-                                      skip_retry_on: skip_retry_on, retry_if: retry_if)
+          unless retry_gate.allow?(exception: exception, retry_number: retry_number, resolved_retries: resolved_retries,
+                                   retry_on: retry_on, skip_retry_on: skip_retry_on, retry_if: retry_if,
+                                   example_id: example_id)
+            raise exception if raised
+
             return
           end
 
@@ -71,47 +73,6 @@ module RSpec
           duration = monotonic_time - started_at
           [e, duration, true]
         end
-      end
-
-      def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)
-        retry_policy.retry_allowed?(
-          exception: exception,
-          retry_on: retry_on,
-          skip_retry_on: skip_retry_on,
-          retry_if: retry_if
-        )
-      end
-
-      def can_retry_exception?(
-        exception:,
-        raised:,
-        retry_number:,
-        resolved_retries:,
-        retry_on:,
-        skip_retry_on:,
-        retry_if:
-      )
-        unless retry_number <= resolved_retries
-          raise exception if raised
-
-          return false
-        end
-
-        unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on,
-                              retry_if: retry_if)
-          raise exception if raised
-
-          return false
-        end
-
-        unless @configuration.retry_budget.consume!
-          debug("retry budget exhausted for #{example_id}")
-          raise exception if raised
-
-          return false
-        end
-
-        true
       end
 
       def publish_flaky_event(attempt:, retries:, duration:)
@@ -198,6 +159,14 @@ module RSpec
           example: @example,
           configuration: @configuration,
           metadata: example_metadata
+        )
+      end
+
+      def retry_gate
+        @retry_gate ||= RetryGate.new(
+          configuration: @configuration,
+          retry_policy: retry_policy,
+          debug: method(:debug)
         )
       end
 
