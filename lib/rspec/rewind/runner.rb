@@ -112,30 +112,12 @@ module RSpec
       end
 
       def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)
-        metadata = example_metadata
-
-        effective_retry_on = normalize_matchers(@configuration.retry_on) +
-                             normalize_matchers(metadata[:rewind_retry_on]) +
-                             normalize_matchers(retry_on)
-
-        metadata_skip_retry_on = first_non_nil(
-          metadata[:rewind_skip_retry_on],
-          metadata[:rewind_skip_on]
-        )
-
-        effective_skip_retry_on = normalize_matchers(@configuration.skip_retry_on) +
-                                  normalize_matchers(metadata_skip_retry_on) +
-                                  normalize_matchers(skip_retry_on)
-
-        effective_retry_if = first_non_nil(retry_if, metadata[:rewind_if], @configuration.retry_if)
-
-        RetryDecision.new(
+        retry_policy.retry_allowed?(
           exception: exception,
-          example: @example,
-          retry_on: effective_retry_on,
-          skip_retry_on: effective_skip_retry_on,
-          retry_if: effective_retry_if
-        ).retry?
+          retry_on: retry_on,
+          skip_retry_on: skip_retry_on,
+          retry_if: retry_if
+        )
       end
 
       def resolve_sleep_seconds(retry_number:, backoff:, wait:, exception:)
@@ -220,10 +202,6 @@ module RSpec
         parsed
       end
 
-      def normalize_matchers(values)
-        Array(values).flatten.compact
-      end
-
       def monotonic_time
         Process.clock_gettime(Process::CLOCK_MONOTONIC)
       end
@@ -269,6 +247,14 @@ module RSpec
 
       def state_resetter
         @state_resetter ||= ExampleStateResetter.new(configuration: @configuration)
+      end
+
+      def retry_policy
+        @retry_policy ||= RetryPolicy.new(
+          example: @example,
+          configuration: @configuration,
+          metadata: example_metadata
+        )
       end
 
       def fatal_exception?(exception)

@@ -30,11 +30,11 @@ module RSpec
       end
 
       def retry_on=(values)
-        @retry_on = normalize_matchers(values)
+        @retry_on = normalize_matchers(values, field: 'retry_on')
       end
 
       def skip_retry_on=(values)
-        @skip_retry_on = normalize_matchers(values)
+        @skip_retry_on = normalize_matchers(values, field: 'skip_retry_on')
       end
 
       def retry_if=(callable)
@@ -105,8 +105,16 @@ module RSpec
         raise ArgumentError, 'backoff must be a non-negative numeric value or callable'
       end
 
-      def normalize_matchers(values)
-        Array(values).flatten.compact
+      def normalize_matchers(values, field:)
+        matchers = Array(values).flatten.compact
+        matchers.each { |matcher| validate_matcher!(matcher, field: field) }
+        matchers
+      end
+
+      def validate_matcher!(matcher, field:)
+        return if matcher.is_a?(Module) || matcher.is_a?(Regexp) || matcher.respond_to?(:call)
+
+        raise ArgumentError, "#{field} entries must be Module, Regexp, or callable"
       end
 
       def normalize_callable(callable, field:)

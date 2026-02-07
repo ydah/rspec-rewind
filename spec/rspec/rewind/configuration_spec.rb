@@ -92,6 +92,33 @@ RSpec.describe RSpec::Rewind::Configuration do
       end.to raise_error(ArgumentError, /flaky_callback must be nil or callable/)
     end
 
+    it 'accepts Module, Regexp, and callable retry matchers' do
+      config = described_class.new
+      callable = ->(_exception, _example) { true }
+
+      config.retry_on = [RuntimeError, /temporary/, callable]
+      config.skip_retry_on = [[IOError], [/fatal/], [callable]]
+
+      expect(config.retry_on).to eq([RuntimeError, /temporary/, callable])
+      expect(config.skip_retry_on).to eq([IOError, /fatal/, callable])
+    end
+
+    it 'raises when retry_on contains unsupported matcher types' do
+      config = described_class.new
+
+      expect do
+        config.retry_on = [RuntimeError, :invalid]
+      end.to raise_error(ArgumentError, /retry_on entries must be Module, Regexp, or callable/)
+    end
+
+    it 'raises when skip_retry_on contains unsupported matcher types' do
+      config = described_class.new
+
+      expect do
+        config.skip_retry_on = [{ matcher: 'invalid' }]
+      end.to raise_error(ArgumentError, /skip_retry_on entries must be Module, Regexp, or callable/)
+    end
+
     it 'raises when boolean settings are not booleans' do
       config = described_class.new
 
