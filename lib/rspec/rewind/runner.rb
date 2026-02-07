@@ -63,8 +63,8 @@ module RSpec
             exception: exception
           )
 
-          notify_retry(event)
-          show_failure_message(exception) if @configuration.display_retry_failure_messages
+          notifier.notify_retry(event)
+          notifier.show_failure_message(exception) if @configuration.display_retry_failure_messages
           clear_for_retry
           sleep_if_needed(sleep_seconds)
 
@@ -169,60 +169,11 @@ module RSpec
           exception: nil
         )
 
-        @configuration.flaky_reporter.record(event)
-        @configuration.flaky_callback&.call(event)
-      rescue StandardError => e
-        debug("failed to report flaky event: #{e.class}: #{e.message}")
-      end
-
-      def notify_retry(event)
-        debug("retry #{event.attempt}/#{event.retries} for #{event.example_id} in #{event.sleep_seconds.round(3)}s")
-        @configuration.retry_callback&.call(event)
-      rescue StandardError => e
-        debug("retry callback failed: #{e.class}: #{e.message}")
+        notifier.publish_flaky(event)
       end
 
       def clear_for_retry
-        source = example_source
-        if source.respond_to?(:clear_exception)
-          source.clear_exception
-        elsif source.instance_variable_defined?(:@exception)
-          source.instance_variable_set(:@exception, nil)
-        end
-
-        clear_execution_result(source)
-        clear_lets if @configuration.clear_lets_on_failure
-      end
-
-      def clear_execution_result(source)
-        return unless source.respond_to?(:execution_result)
-
-        result = source.execution_result
-        return unless result
-
-        set_if_writer(result, :status, nil)
-        set_if_writer(result, :exception, nil)
-        set_if_writer(result, :pending_message, nil)
-        set_if_writer(result, :run_time, nil)
-      end
-
-      def clear_lets
-        source = example_source
-        return unless source.respond_to?(:example_group_instance)
-
-        group_instance = source.example_group_instance
-        return unless group_instance
-
-        if group_instance.respond_to?(:clear_lets)
-          group_instance.clear_lets
-        elsif group_instance.instance_variable_defined?(:@__memoized)
-          group_instance.instance_variable_set(:@__memoized, nil)
-        end
-      end
-
-      def show_failure_message(exception)
-        message = "#{exception.class}: #{exception.message}"
-        reporter_message("[rspec-rewind] #{message}")
+        state_resetter.reset(example_source)
       end
 
       def sleep_if_needed(seconds)
@@ -232,28 +183,15 @@ module RSpec
       end
 
       def build_event(status:, retry_reason:, attempt:, retries:, duration:, sleep_seconds:, exception:)
-        source = example_source
-
-        Event.new(
-          schema_version: EVENT_SCHEMA_VERSION,
+        event_builder.build(
           status: status,
           retry_reason: retry_reason,
-          example_id: source.id,
-          description: source.full_description,
-          location: source.location,
           attempt: attempt,
           retries: retries,
-          exception_class: exception&.class&.name,
-          exception_message: exception&.message,
           duration: duration,
           sleep_seconds: sleep_seconds,
-          timestamp: Time.now.utc.iso8601
+          exception: exception
         )
-      end
-
-      def set_if_writer(target, attribute, value)
-        writer = "#{attribute}="
-        target.public_send(writer, value) if target.respond_to?(writer)
       end
 
       def parse_non_negative_integer(value, source:)
@@ -315,6 +253,22 @@ module RSpec
       def example_id
         source = example_source
         source.respond_to?(:id) ? source.id : 'unknown'
+      end
+
+      def event_builder
+        @event_builder ||= RetryEventBuilder.new(example_source: example_source)
+      end
+
+      def notifier
+        @notifier ||= RetryNotifier.new(
+          configuration: @configuration,
+          debug: method(:debug),
+          reporter_message: method(:reporter_message)
+        )
+      end
+
+      def state_resetter
+        @state_resetter ||= ExampleStateResetter.new(configuration: @configuration)
       end
 
       def fatal_exception?(exception)
