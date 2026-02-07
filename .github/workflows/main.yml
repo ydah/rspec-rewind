@@ -1,19 +1,15 @@
 name: Ruby
-
 on:
   push:
     branches:
       - main
   pull_request:
   workflow_dispatch:
-
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -40,7 +36,6 @@ jobs:
           bundler-cache: true
       - name: Run specs
         run: bundle exec rake spec
-
   compatibility:
     runs-on: ubuntu-latest
     name: Compatibility (RSpec 3.12)
@@ -58,7 +53,6 @@ jobs:
           bundler-cache: true
       - name: Verify minimum supported RSpec
         run: bundle exec rspec
-
   dependency-security:
     runs-on: ubuntu-latest
     name: Dependency Security
@@ -78,7 +72,6 @@ jobs:
         run: gem install bundler-audit --no-document
       - name: Audit dependencies
         run: bundle-audit check --update
-
   quality:
     runs-on: ubuntu-latest
     name: Quality
