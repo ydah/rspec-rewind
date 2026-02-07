@@ -111,34 +111,10 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
-  it 'uses metadata retry alias before configuration default' do
-    runner, example, = build_runner(
-      outcomes: [RuntimeError.new('a'), RuntimeError.new('b'), nil],
-      metadata: { retry: 1 },
-      configure: ->(config) { config.default_retries = 5 }
-    )
-
-    runner.run
-
-    expect(example.run_calls).to eq(2)
-  end
-
   it 'treats metadata rewind: true as an enable flag and uses defaults' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('a'), nil],
       metadata: { rewind: true },
-      configure: ->(config) { config.default_retries = 1 }
-    )
-
-    runner.run
-
-    expect(example.run_calls).to eq(2)
-  end
-
-  it 'treats metadata retry: true as an enable flag and uses defaults' do
-    runner, example, = build_runner(
-      outcomes: [RuntimeError.new('a'), nil],
-      metadata: { retry: true },
       configure: ->(config) { config.default_retries = 1 }
     )
 
@@ -159,28 +135,16 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(1)
   end
 
-  it 'treats metadata retry: false as zero retries' do
+  it 'ignores metadata retry key' do
     runner, example, = build_runner(
       outcomes: [RuntimeError.new('a'), nil],
       metadata: { retry: false },
-      configure: ->(config) { config.default_retries = 3 }
+      configure: ->(config) { config.default_retries = 1 }
     )
 
     runner.run
 
-    expect(example.run_calls).to eq(1)
-  end
-
-  it 'prefers metadata rewind over metadata retry when both are set' do
-    runner, example, = build_runner(
-      outcomes: [RuntimeError.new('a'), nil],
-      metadata: { rewind: false, retry: 2 },
-      configure: ->(config) { config.default_retries = 3 }
-    )
-
-    runner.run
-
-    expect(example.run_calls).to eq(1)
+    expect(example.run_calls).to eq(2)
   end
 
   it 'uses configuration default when no override is provided' do

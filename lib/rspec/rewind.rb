@@ -10,6 +10,8 @@ require_relative 'rewind/flaky_reporter'
 require_relative 'rewind/matcher_validation'
 require_relative 'rewind/configuration'
 require_relative 'rewind/event'
+require_relative 'rewind/retry_count_resolver'
+require_relative 'rewind/retry_delay_resolver'
 require_relative 'rewind/retry_event_builder'
 require_relative 'rewind/retry_notifier'
 require_relative 'rewind/example_state_resetter'
@@ -41,7 +43,7 @@ module RSpec
 
         ::RSpec.configure do |config|
           config.around(:each) do |example|
-            if example.metadata[:rewind] == false || example.metadata[:retry] == false
+            if example.metadata[:rewind] == false
               example.run
             else
               example.run_with_rewind

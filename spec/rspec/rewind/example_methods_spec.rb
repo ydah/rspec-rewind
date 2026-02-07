@@ -14,7 +14,7 @@ RSpec.describe RSpec::Rewind::ExampleMethods do
   let(:runner) { instance_spy(RSpec::Rewind::Runner) }
   let(:rewind_options) do
     {
-      'retry' => 2,
+      'retries' => 2,
       'backoff' => :exp,
       'wait' => 0.1,
       'retry_on' => [RuntimeError],
@@ -41,6 +41,12 @@ RSpec.describe RSpec::Rewind::ExampleMethods do
       skip_retry_on: [IOError],
       retry_if: kind_of(Proc)
     )
+  end
+
+  it 'ignores removed retry alias key' do
+    dummy_example.run_with_rewind('retry' => 2)
+
+    expect(runner).to have_received(:run).with(no_args)
   end
 
   it 'passes empty options to Runner' do

@@ -63,8 +63,8 @@ end
 
 Use `rewind_skip_retry_on` for skip filters.
 Callable filters can accept either `(exception)` or `(exception, example)`.
-`rewind: true` and `retry: true` can be used as enable flags (retry count falls back to defaults).
-`rewind: false` and `retry: false` disable retries for that example.
+`rewind: true` can be used as an enable flag (retry count falls back to defaults).
+`rewind: false` disables retries for that example.
 
 ## Configuration reference
 

@@ -83,7 +83,7 @@ RSpec.describe RSpec::Rewind do
     end
   end
 
-  it 'does not retry when retry: false disables compatibility path' do
+  it 'ignores retry: false metadata and still retries by default policy' do
     source = <<~RUBY
       # frozen_string_literal: true
 
@@ -95,10 +95,10 @@ RSpec.describe RSpec::Rewind do
 
       attempts = 0
 
-      RSpec.describe "retry disabled", retry: false do
-        it "fails without retry" do
+      RSpec.describe "retry metadata ignored", retry: false do
+        it "passes after retry" do
           attempts += 1
-          raise "compat path disabled" if attempts == 1
+          raise "first attempt fails" if attempts == 1
         end
       end
     RUBY
@@ -106,8 +106,8 @@ RSpec.describe RSpec::Rewind do
     stdout, stderr, status = run_temp_rspec(source)
 
     aggregate_failures do
-      expect(status.success?).to be(false), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
-      expect(stdout).to include('1 example, 1 failure')
+      expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('1 example, 0 failures')
     end
   end
 end

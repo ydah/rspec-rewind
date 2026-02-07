@@ -17,7 +17,7 @@ module RSpec
         symbolized = options.transform_keys(&:to_sym)
 
         {
-          retries: symbolized.fetch(:retries, symbolized[:retry]),
+          retries: symbolized[:retries],
           backoff: symbolized[:backoff],
           wait: symbolized[:wait],
           retry_on: symbolized[:retry_on],

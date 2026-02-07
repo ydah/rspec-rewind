@@ -3,15 +3,13 @@
 module RSpec
   module Rewind
     class Runner
-      ENV_RETRIES_KEY = 'RSPEC_REWIND_RETRIES'
-
       def initialize(example:, configuration:)
         @example = example
         @configuration = configuration
       end
 
       def run(retries: nil, backoff: nil, wait: nil, retry_on: nil, skip_retry_on: nil, retry_if: nil)
-        resolved_retries = resolve_retries(retries)
+        resolved_retries = retry_count_resolver.resolve(explicit_retries: retries)
         return @example.run if resolved_retries <= 0
 
         total_attempts = resolved_retries + 1
@@ -26,27 +24,13 @@ module RSpec
           end
 
           retry_number = attempt
-          unless retry_number <= resolved_retries
-            raise exception if raised
-
+          unless can_retry_exception?(exception: exception, raised: raised, retry_number: retry_number,
+                                      resolved_retries: resolved_retries, retry_on: retry_on,
+                                      skip_retry_on: skip_retry_on, retry_if: retry_if)
             return
           end
 
-          unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on,
-                                retry_if: retry_if)
-            raise exception if raised
-
-            return
-          end
-
-          unless @configuration.retry_budget.consume!
-            debug("retry budget exhausted for #{example_id}")
-            raise exception if raised
-
-            return
-          end
-
-          sleep_seconds = resolve_sleep_seconds(
+          sleep_seconds = retry_delay_resolver.resolve(
             retry_number: retry_number,
             backoff: backoff,
             wait: wait,
@@ -89,28 +73,6 @@ module RSpec
         end
       end
 
-      def resolve_retries(explicit_retries)
-        env_retries = ENV.fetch(ENV_RETRIES_KEY, nil)
-        return parse_non_negative_integer(env_retries, source: ENV_RETRIES_KEY) if env_retries
-
-        metadata = example_metadata
-        configured = first_non_nil(
-          normalize_retry_override(explicit_retries),
-          normalize_retry_override(metadata[:rewind]),
-          normalize_retry_override(metadata[:retry]),
-          @configuration.default_retries
-        )
-
-        parse_non_negative_integer(configured, source: 'retries')
-      end
-
-      def normalize_retry_override(value)
-        return nil if value.nil? || value == true
-        return 0 if value == false
-
-        value
-      end
-
       def retry_allowed?(exception:, retry_on:, skip_retry_on:, retry_if:)
         retry_policy.retry_allowed?(
           exception: exception,
@@ -120,24 +82,36 @@ module RSpec
         )
       end
 
-      def resolve_sleep_seconds(retry_number:, backoff:, wait:, exception:)
-        metadata = example_metadata
-        explicit_wait = first_non_nil(wait, metadata[:rewind_wait])
+      def can_retry_exception?(
+        exception:,
+        raised:,
+        retry_number:,
+        resolved_retries:,
+        retry_on:,
+        skip_retry_on:,
+        retry_if:
+      )
+        unless retry_number <= resolved_retries
+          raise exception if raised
 
-        return normalize_delay(explicit_wait) if explicit_wait
+          return false
+        end
 
-        strategy = first_non_nil(backoff, metadata[:rewind_backoff], @configuration.backoff)
-        return normalize_delay(strategy) if strategy.is_a?(Numeric)
+        unless retry_allowed?(exception: exception, retry_on: retry_on, skip_retry_on: skip_retry_on,
+                              retry_if: retry_if)
+          raise exception if raised
 
-        return 0.0 unless strategy.respond_to?(:call)
+          return false
+        end
 
-        raw = strategy.call(
-          retry_number: retry_number,
-          example: @example,
-          exception: exception
-        )
+        unless @configuration.retry_budget.consume!
+          debug("retry budget exhausted for #{example_id}")
+          raise exception if raised
 
-        normalize_delay(raw)
+          return false
+        end
+
+        true
       end
 
       def publish_flaky_event(attempt:, retries:, duration:)
@@ -176,38 +150,8 @@ module RSpec
         )
       end
 
-      def parse_non_negative_integer(value, source:)
-        return 0 if value.nil?
-
-        parsed = begin
-          Integer(value)
-        rescue TypeError, ArgumentError
-          raise ArgumentError, "#{source} must be a non-negative integer"
-        end
-
-        raise ArgumentError, "#{source} must be >= 0" if parsed.negative?
-
-        parsed
-      end
-
-      def normalize_delay(value)
-        parsed = begin
-          Float(value)
-        rescue TypeError, ArgumentError
-          raise ArgumentError, 'delay must be numeric'
-        end
-
-        raise ArgumentError, 'delay must be >= 0' if parsed.negative?
-
-        parsed
-      end
-
       def monotonic_time
         Process.clock_gettime(Process::CLOCK_MONOTONIC)
-      end
-
-      def first_non_nil(*values)
-        values.find { |value| !value.nil? }
       end
 
       def example_source
@@ -254,6 +198,21 @@ module RSpec
           example: @example,
           configuration: @configuration,
           metadata: example_metadata
+        )
+      end
+
+      def retry_count_resolver
+        @retry_count_resolver ||= RetryCountResolver.new(
+          configuration: @configuration,
+          metadata: example_metadata
+        )
+      end
+
+      def retry_delay_resolver
+        @retry_delay_resolver ||= RetryDelayResolver.new(
+          configuration: @configuration,
+          metadata: example_metadata,
+          example: @example
         )
       end
 
