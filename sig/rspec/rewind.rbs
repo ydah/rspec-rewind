@@ -154,6 +154,23 @@ module RSpec
       ) -> bool
     end
 
+    class RunnerComponents
+      attr_reader retry_count_resolver: RetryCountResolver
+      attr_reader attempt_runner: AttemptRunner
+      attr_reader retry_gate: RetryGate
+      attr_reader retry_transition: RetryTransition
+      attr_reader flaky_transition: FlakyTransition
+
+      def initialize: (
+        example: untyped,
+        configuration: Configuration,
+        example_source: untyped,
+        metadata: Hash[Symbol, untyped]?,
+        debug: untyped,
+        reporter_message: untyped
+      ) -> void
+    end
+
     class Runner
       def initialize: (example: untyped, configuration: Configuration) -> void
       def run: (?retries: untyped, ?backoff: untyped, ?wait: untyped, ?retry_on: untyped, ?skip_retry_on: untyped, ?retry_if: untyped) -> void
