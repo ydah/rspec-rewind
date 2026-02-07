@@ -61,6 +61,38 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
+  it 'invokes flaky_callback even when flaky_reporter raises' do
+    failing_reporter = Class.new do
+      def record(_event)
+        raise 'report failed'
+      end
+    end.new
+    callback_events = []
+
+    runner, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: lambda do |config|
+        config.flaky_reporter = failing_reporter
+        config.flaky_callback = ->(event) { callback_events << event }
+      end
+    )
+
+    expect { runner.run }.not_to raise_error
+    expect(callback_events.size).to eq(1)
+  end
+
+  it 'swallows exceptions raised by flaky_callback' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: ->(config) { config.flaky_callback = ->(_event) { raise 'callback failed' } }
+    )
+
+    expect { runner.run }.not_to raise_error
+    expect(example.run_calls).to eq(2)
+  end
+
   it 'displays retry failure messages when enabled' do
     allow(RSpec.configuration.reporter).to receive(:message)
 

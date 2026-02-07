@@ -17,10 +17,8 @@ module RSpec
       end
 
       def publish_flaky(event)
-        @configuration.flaky_reporter.record(event)
-        @configuration.flaky_callback&.call(event)
-      rescue StandardError => e
-        debug("failed to report flaky event: #{e.class}: #{e.message}")
+        publish_flaky_report(event)
+        invoke_flaky_callback(event)
       end
 
       def show_failure_message(exception)
@@ -28,6 +26,18 @@ module RSpec
       end
 
       private
+
+      def publish_flaky_report(event)
+        @configuration.flaky_reporter.record(event)
+      rescue StandardError => e
+        debug("failed to record flaky event: #{e.class}: #{e.message}")
+      end
+
+      def invoke_flaky_callback(event)
+        @configuration.flaky_callback&.call(event)
+      rescue StandardError => e
+        debug("flaky callback failed: #{e.class}: #{e.message}")
+      end
 
       def debug(message)
         @debug.call(message)
