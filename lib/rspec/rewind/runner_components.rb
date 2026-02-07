@@ -7,7 +7,8 @@ module RSpec
                   :attempt_runner,
                   :retry_gate,
                   :retry_transition,
-                  :flaky_transition
+                  :flaky_transition,
+                  :retry_loop
 
       def initialize(example:, configuration:, context:, logger:)
         event_builder = RetryEventBuilder.new(example_source: context.source)
@@ -49,6 +50,15 @@ module RSpec
         @flaky_transition = FlakyTransition.new(
           event_builder: event_builder,
           notifier: notifier
+        )
+        @retry_loop = RetryLoop.new(
+          example: example,
+          context: context,
+          retry_count_resolver: @retry_count_resolver,
+          attempt_runner: @attempt_runner,
+          retry_gate: @retry_gate,
+          retry_transition: @retry_transition,
+          flaky_transition: @flaky_transition
         )
       end
     end

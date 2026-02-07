@@ -24,5 +24,6 @@ RSpec.describe RSpec::Rewind::RunnerComponents do
     expect(components.retry_gate).to be_a(RSpec::Rewind::RetryGate)
     expect(components.retry_transition).to be_a(RSpec::Rewind::RetryTransition)
     expect(components.flaky_transition).to be_a(RSpec::Rewind::FlakyTransition)
+    expect(components.retry_loop).to be_a(RSpec::Rewind::RetryLoop)
   end
 end

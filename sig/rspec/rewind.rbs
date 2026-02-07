@@ -167,12 +167,33 @@ module RSpec
       def debug: (String) -> void
     end
 
+    class RetryLoop
+      def initialize: (
+        example: untyped,
+        context: ExampleContext,
+        retry_count_resolver: RetryCountResolver,
+        attempt_runner: AttemptRunner,
+        retry_gate: RetryGate,
+        retry_transition: RetryTransition,
+        flaky_transition: FlakyTransition
+      ) -> void
+      def run: (
+        retries: untyped,
+        backoff: untyped,
+        wait: untyped,
+        retry_on: untyped,
+        skip_retry_on: untyped,
+        retry_if: untyped
+      ) -> void
+    end
+
     class RunnerComponents
       attr_reader retry_count_resolver: RetryCountResolver
       attr_reader attempt_runner: AttemptRunner
       attr_reader retry_gate: RetryGate
       attr_reader retry_transition: RetryTransition
       attr_reader flaky_transition: FlakyTransition
+      attr_reader retry_loop: RetryLoop
 
       def initialize: (
         example: untyped,
