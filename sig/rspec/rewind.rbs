@@ -116,6 +116,11 @@ module RSpec
       def run: (run_target: untyped, exception_source: untyped) -> [Exception?, Float, bool]
     end
 
+    class FlakyTransition
+      def initialize: (event_builder: untyped, notifier: untyped) -> void
+      def perform: (attempt: Integer, retries: Integer, duration: Numeric) -> void
+    end
+
     class RetryTransition
       def initialize: (
         configuration: Configuration,

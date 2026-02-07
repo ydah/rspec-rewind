@@ -19,7 +19,7 @@ module RSpec
           exception, duration, raised = attempt_runner.run(run_target: @example, exception_source: example_source)
 
           if exception.nil?
-            publish_flaky_event(attempt: attempt, retries: resolved_retries, duration: duration) if attempt > 1
+            flaky_transition.perform(attempt: attempt, retries: resolved_retries, duration: duration) if attempt > 1
             return
           end
 
@@ -47,32 +47,6 @@ module RSpec
       end
 
       private
-
-      def publish_flaky_event(attempt:, retries:, duration:)
-        event = build_event(
-          status: :flaky,
-          retry_reason: nil,
-          attempt: attempt,
-          retries: retries,
-          duration: duration,
-          sleep_seconds: 0.0,
-          exception: nil
-        )
-
-        notifier.publish_flaky(event)
-      end
-
-      def build_event(status:, retry_reason:, attempt:, retries:, duration:, sleep_seconds:, exception:)
-        event_builder.build(
-          status: status,
-          retry_reason: retry_reason,
-          attempt: attempt,
-          retries: retries,
-          duration: duration,
-          sleep_seconds: sleep_seconds,
-          exception: exception
-        )
-      end
 
       def example_source
         return @example.example if @example.respond_to?(:example) && @example.example
@@ -136,6 +110,13 @@ module RSpec
           notifier: notifier,
           state_resetter: state_resetter,
           sleep: Kernel.method(:sleep)
+        )
+      end
+
+      def flaky_transition
+        @flaky_transition ||= FlakyTransition.new(
+          event_builder: event_builder,
+          notifier: notifier
         )
       end
 
