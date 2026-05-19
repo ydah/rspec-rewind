@@ -25,7 +25,22 @@ RSpec.describe RSpec::Rewind::RetryLoop do
     expect_retry_behavior(setup: setup, error: error)
   end
 
-  def build_setup(resolved_retries:, attempt_results:)
+  it 'uses the injected clock for elapsed retry timing' do
+    error = RuntimeError.new('boom')
+    setup = build_setup(
+      resolved_retries: 1,
+      attempt_results: [[error, 0.1, true], [nil, 0.2, false]],
+      clock: build_clock(100.0, 101.0, 102.0, 104.0)
+    )
+
+    setup[:retry_loop].run(**base_run_options)
+
+    expect(setup[:retry_gate]).to have_received(:decision).with(hash_including(elapsed_time: 1.0))
+    expect(setup[:retry_transition]).to have_received(:perform).with(hash_including(total_duration: 2.0))
+    expect(setup[:flaky_transition]).to have_received(:perform).with(hash_including(total_duration: 4.0))
+  end
+
+  def build_setup(resolved_retries:, attempt_results:, clock: nil)
     example = instance_spy(RunnerSpecSupport::FakeExample)
     context = instance_double(RSpec::Rewind::ExampleContext, source: :source, id: 'example-id')
     retry_count_resolver = instance_spy(RSpec::Rewind::RetryCountResolver, resolve: resolved_retries)
@@ -48,7 +63,8 @@ RSpec.describe RSpec::Rewind::RetryLoop do
       attempt_runner: attempt_runner,
       retry_gate: retry_gate,
       retry_transition: retry_transition,
-      flaky_transition: flaky_transition
+      flaky_transition: flaky_transition,
+      clock: clock
     )
 
     {
@@ -109,5 +125,9 @@ RSpec.describe RSpec::Rewind::RetryLoop do
       skip_retry_on: nil,
       retry_if: nil
     }
+  end
+
+  def build_clock(*ticks)
+    -> { ticks.shift }
   end
 end

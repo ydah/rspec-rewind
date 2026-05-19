@@ -49,7 +49,8 @@ module RSpec
           event_builder: event_builder,
           notifier: notifier,
           state_resetter: state_resetter,
-          sleep: configuration.sleeper
+          sleep: configuration.sleeper,
+          clock: configuration.clock
         )
         @flaky_transition = FlakyTransition.new(
           event_builder: event_builder,
@@ -62,7 +63,8 @@ module RSpec
           attempt_runner: @attempt_runner,
           retry_gate: @retry_gate,
           retry_transition: @retry_transition,
-          flaky_transition: @flaky_transition
+          flaky_transition: @flaky_transition,
+          clock: configuration.clock
         )
       end
     end

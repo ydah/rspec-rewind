@@ -5,13 +5,22 @@ module RSpec
     SleepMeasurement = Struct.new(:scheduled, :actual, keyword_init: true)
 
     class RetryTransition
-      def initialize(configuration:, retry_delay_resolver:, event_builder:, notifier:, state_resetter:, sleep:)
+      def initialize(
+        configuration:,
+        retry_delay_resolver:,
+        event_builder:,
+        notifier:,
+        state_resetter:,
+        sleep:,
+        clock: nil
+      )
         @configuration = configuration
         @retry_delay_resolver = retry_delay_resolver
         @event_builder = event_builder
         @notifier = notifier
         @state_resetter = state_resetter
         @sleep = sleep
+        @clock = clock || -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
       end
 
       def perform(
@@ -188,9 +197,13 @@ module RSpec
       def sleep_if_needed(seconds)
         return 0.0 unless seconds.positive?
 
-        started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        started_at = monotonic_time
         @sleep.call(seconds)
-        Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at
+        monotonic_time - started_at
+      end
+
+      def monotonic_time
+        @clock.call
       end
     end
   end

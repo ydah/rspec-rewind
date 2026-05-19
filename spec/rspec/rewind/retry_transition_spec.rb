@@ -37,6 +37,26 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     expect(context[:sleep_calls]).to be_empty
   end
 
+  it 'measures actual sleep with an injected clock' do
+    params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 0.25)
+    ticks = [10.0, 10.4]
+    transition, _resolver, builder, _notifier, = build_transition(
+      display_retry_failure_messages: false,
+      resolved_sleep: 0.25,
+      clock: -> { ticks.shift }
+    )
+    event = instance_double(RSpec::Rewind::Event)
+    allow(builder).to receive(:build).and_return(event)
+
+    measurement = transition.perform(**params)
+
+    expect(measurement.actual).to be_within(0.001).of(0.4)
+    expect(builder).to have_received(:build).with(hash_including(
+                                                    actual_sleep_seconds: be_within(0.001).of(0.4),
+                                                    sleep_total: be_within(0.001).of(0.4)
+                                                  ))
+  end
+
   it 'publishes a reset_failed event and continues when reset failure policy allows it' do
     params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 0.0)
     reset_exception = RuntimeError.new('reset failed')
@@ -174,7 +194,7 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     )
   end
 
-  def build_transition(display_retry_failure_messages:, resolved_sleep:)
+  def build_transition(display_retry_failure_messages:, resolved_sleep:, clock: nil)
     configuration = instance_double(
       RSpec::Rewind::Configuration,
       display_retry_failure_messages: display_retry_failure_messages
@@ -191,7 +211,8 @@ RSpec.describe RSpec::Rewind::RetryTransition do
       event_builder: builder,
       notifier: notifier,
       state_resetter: resetter,
-      sleep: ->(seconds) { sleep_calls << seconds }
+      sleep: ->(seconds) { sleep_calls << seconds },
+      clock: clock
     )
 
     [transition, resolver, builder, notifier, resetter, sleep_calls]

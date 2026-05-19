@@ -10,7 +10,8 @@ module RSpec
         attempt_runner:,
         retry_gate:,
         retry_transition:,
-        flaky_transition:
+        flaky_transition:,
+        clock: nil
       )
         @example = example
         @context = context
@@ -19,6 +20,7 @@ module RSpec
         @retry_gate = retry_gate
         @retry_transition = retry_transition
         @flaky_transition = flaky_transition
+        @clock = clock || -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
       end
 
       def run(retries:, backoff:, wait:, retry_on:, skip_retry_on:, retry_if:)
@@ -110,7 +112,7 @@ module RSpec
       private
 
       def monotonic_time
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        @clock.call
       end
 
       def failure_fingerprint(exception)

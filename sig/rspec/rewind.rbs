@@ -331,7 +331,8 @@ module RSpec
         event_builder: untyped,
         notifier: untyped,
         state_resetter: untyped,
-        sleep: untyped
+        sleep: untyped,
+        ?clock: untyped?
       ) -> void
       def perform: (
         retry_number: Integer,
@@ -420,7 +421,8 @@ module RSpec
         attempt_runner: AttemptRunner,
         retry_gate: RetryGate,
         retry_transition: RetryTransition,
-        flaky_transition: FlakyTransition
+        flaky_transition: FlakyTransition,
+        ?clock: untyped?
       ) -> void
       def run: (
         retries: untyped,
