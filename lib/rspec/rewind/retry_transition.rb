@@ -47,6 +47,7 @@ module RSpec
           previous_sleep_seconds: sleep_total,
           failure_fingerprint: failure_fingerprint
         )
+        sleep_seconds = clamp_sleep_to_budget(sleep_seconds, sleep_total)
 
         event_context = {
           retry_number: retry_number,
@@ -200,6 +201,16 @@ module RSpec
         started_at = monotonic_time
         @sleep.call(seconds)
         monotonic_time - started_at
+      end
+
+      def clamp_sleep_to_budget(seconds, sleep_total)
+        max_total_sleep = @configuration.max_total_sleep
+        return seconds if max_total_sleep.nil?
+
+        remaining = max_total_sleep - sleep_total.to_f
+        return 0.0 unless remaining.positive?
+
+        [seconds, remaining].min
       end
 
       def monotonic_time

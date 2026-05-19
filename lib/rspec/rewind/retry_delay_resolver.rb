@@ -31,7 +31,7 @@ module RSpec
       )
         explicit_wait = first_non_nil(wait, @metadata[:rewind_wait])
         warn_delay_conflict(wait: wait, backoff: backoff)
-        return normalize_delay(explicit_wait) if explicit_wait
+        return normalize_delay(explicit_wait) unless explicit_wait.nil?
 
         strategy = first_non_nil(backoff, @metadata[:rewind_backoff], @configuration.backoff)
         return normalize_delay(strategy) if strategy.is_a?(Numeric)

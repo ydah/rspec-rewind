@@ -107,4 +107,20 @@ RSpec.describe RSpec::Rewind::RetryDelayResolver do
       resolver.resolve(retry_number: 1, backoff: ->(**_) { :bad }, wait: nil, exception: RuntimeError.new('x'))
     end.to raise_error(ArgumentError, /delay must be numeric/)
   end
+
+  it 'raises when explicit wait is not numeric' do
+    resolver = build_resolver
+
+    expect do
+      resolver.resolve(retry_number: 1, backoff: nil, wait: false, exception: RuntimeError.new('x'))
+    end.to raise_error(ArgumentError, /delay must be numeric/)
+  end
+
+  it 'raises when metadata wait is not numeric' do
+    resolver = build_resolver(metadata: { rewind_wait: false })
+
+    expect do
+      resolver.resolve(retry_number: 1, backoff: nil, wait: nil, exception: RuntimeError.new('x'))
+    end.to raise_error(ArgumentError, /delay must be numeric/)
+  end
 end

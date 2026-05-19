@@ -57,6 +57,30 @@ RSpec.describe RSpec::Rewind::RetryTransition do
                                                   ))
   end
 
+  it 'clamps sleep to the remaining total sleep budget' do
+    params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 1.0)
+    ticks = [10.0, 10.25]
+    transition, _resolver, builder, _notifier, _resetter, sleep_calls = build_transition(
+      display_retry_failure_messages: false,
+      resolved_sleep: 1.0,
+      max_total_sleep: 0.75,
+      clock: -> { ticks.shift }
+    )
+    event = instance_double(RSpec::Rewind::Event)
+    allow(builder).to receive(:build).and_return(event)
+
+    measurement = transition.perform(**params, sleep_total: 0.5)
+
+    expect(measurement).to have_attributes(scheduled: 0.25, actual: 0.25)
+    expect(sleep_calls).to eq([0.25])
+    expect(builder).to have_received(:build).with(hash_including(
+                                                    sleep_seconds: 0.25,
+                                                    scheduled_sleep_seconds: 0.25,
+                                                    actual_sleep_seconds: 0.25,
+                                                    sleep_total: 0.75
+                                                  ))
+  end
+
   it 'publishes a reset_failed event and continues when reset failure policy allows it' do
     params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 0.0)
     reset_exception = RuntimeError.new('reset failed')
@@ -194,10 +218,11 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     )
   end
 
-  def build_transition(display_retry_failure_messages:, resolved_sleep:, clock: nil)
+  def build_transition(display_retry_failure_messages:, resolved_sleep:, max_total_sleep: nil, clock: nil)
     configuration = instance_double(
       RSpec::Rewind::Configuration,
-      display_retry_failure_messages: display_retry_failure_messages
+      display_retry_failure_messages: display_retry_failure_messages,
+      max_total_sleep: max_total_sleep
     )
     resolver = instance_spy(RSpec::Rewind::RetryDelayResolver, resolve: resolved_sleep)
     builder = instance_spy(RSpec::Rewind::RetryEventBuilder)
