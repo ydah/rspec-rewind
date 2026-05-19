@@ -63,13 +63,24 @@ module RSpec
       private_class_method :normalize_numeric
 
       def random_value(rng)
-        if rng.respond_to?(:rand)
-          rng.rand
-        elsif rng.respond_to?(:call)
-          rng.call
-        else
-          raise ArgumentError, 'rng must respond to #rand or #call'
+        raw =
+          if rng.respond_to?(:rand)
+            rng.rand
+          elsif rng.respond_to?(:call)
+            rng.call
+          else
+            raise ArgumentError, 'rng must respond to #rand or #call'
+          end
+
+        value = begin
+          Float(raw)
+        rescue TypeError, ArgumentError
+          raise ArgumentError, 'rng must return a numeric value'
         end
+
+        raise ArgumentError, 'rng must return a value between 0 and 1' unless value.between?(0.0, 1.0)
+
+        value
       end
       private_class_method :random_value
     end

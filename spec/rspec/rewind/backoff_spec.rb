@@ -78,5 +78,15 @@ RSpec.describe RSpec::Rewind::Backoff do
         described_class.exponential(base: 0.1, jitter: -0.2)
       end.to raise_error(ArgumentError, /jitter must be >= 0/)
     end
+
+    it 'raises when injected rng does not return a normalized numeric value' do
+      expect do
+        described_class.exponential(base: 0.1, jitter: 0.2, rng: -> { 'high' }).call(retry_number: 1)
+      end.to raise_error(ArgumentError, /rng must return a numeric value/)
+
+      expect do
+        described_class.exponential(base: 0.1, jitter: 0.2, rng: -> { 1.5 }).call(retry_number: 1)
+      end.to raise_error(ArgumentError, /rng must return a value between 0 and 1/)
+    end
   end
 end
