@@ -3,10 +3,12 @@
 module RSpec
   module Rewind
     class RetryDelayResolver
-      def initialize(configuration:, metadata:, example:)
+      def initialize(configuration:, metadata:, example:, warn: ->(_message) {})
         @configuration = configuration
         @metadata = metadata || {}
         @example = example
+        @warn = warn
+        @delay_conflict_warned = false
       end
 
       DelayContext = Struct.new(
@@ -28,6 +30,7 @@ module RSpec
         failure_fingerprint: nil
       )
         explicit_wait = first_non_nil(wait, @metadata[:rewind_wait])
+        warn_delay_conflict(wait: wait, backoff: backoff)
         return normalize_delay(explicit_wait) if explicit_wait
 
         strategy = first_non_nil(backoff, @metadata[:rewind_backoff], @configuration.backoff)
@@ -69,6 +72,16 @@ module RSpec
 
       def first_non_nil(*values)
         values.find { |value| !value.nil? }
+      end
+
+      def warn_delay_conflict(wait:, backoff:)
+        return unless @configuration.warn_on_delay_conflict
+        return if @delay_conflict_warned
+        return unless !first_non_nil(wait, @metadata[:rewind_wait]).nil? &&
+                      !first_non_nil(backoff, @metadata[:rewind_backoff]).nil?
+
+        @delay_conflict_warned = true
+        @warn.call('[rspec-rewind] wait and backoff are both configured; wait takes precedence')
       end
 
       def accepts_keyword?(callable, keyword)

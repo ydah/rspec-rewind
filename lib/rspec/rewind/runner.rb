@@ -3,9 +3,10 @@
 module RSpec
   module Rewind
     class Runner
-      def initialize(example:, configuration:)
+      def initialize(example:, configuration:, component_factory: RunnerComponentFactory.new)
         @example = example
         @configuration = configuration
+        @component_factory = component_factory
         @context = ExampleContext.new(example: example)
         @logger = RunnerLogger.new(configuration: configuration, warn_output: method(:warn))
       end
@@ -24,7 +25,7 @@ module RSpec
       private
 
       def components
-        @components ||= RunnerComponents.new(
+        @components ||= @component_factory.build(
           example: @example,
           configuration: @configuration,
           context: @context,

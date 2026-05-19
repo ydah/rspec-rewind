@@ -6,6 +6,7 @@ require 'time'
 require_relative 'version'
 require_relative 'backoff'
 require_relative 'retry_budget'
+require_relative 'retry_summary'
 require_relative 'flaky_reporter'
 require_relative 'matcher_validation'
 require_relative 'configuration_validation'
@@ -23,12 +24,14 @@ require_relative 'retry_gate'
 require_relative 'retry_loop'
 require_relative 'runner_logger'
 require_relative 'runner_components'
+require_relative 'runner_component_factory'
 require_relative 'rspec_adapter'
 require_relative 'example_state_resetter'
 require_relative 'retry_policy'
 require_relative 'retry_decision'
 require_relative 'runner'
 require_relative 'example_methods'
+require_relative 'api'
 
 module RSpec
   module Rewind
@@ -48,10 +51,16 @@ module RSpec
       def install!
         return false if installed?
 
+        warn_on_retry_gem_conflict
+
         ::RSpec::Core::Example.include(ExampleMethods)
         ::RSpec::Core::Example::Procsy.include(ExampleMethods) if defined?(::RSpec::Core::Example::Procsy)
 
         ::RSpec.configure do |config|
+          config.before(:suite) do
+            RSpec::Rewind.prepare_suite!
+          end
+
           config.around(:each) do |example|
             if example.metadata[:rewind] == false
               example.run
@@ -80,6 +89,40 @@ module RSpec
         reporter = configuration.flaky_reporter
         reporter.flush if reporter.respond_to?(:flush)
         reporter.close if reporter.respond_to?(:close)
+        publish_retry_summary
+        enforce_flaky_threshold!
+      end
+
+      def prepare_suite!
+        configuration.retry_summary.reset!
+        configuration.freeze if configuration.freeze_configuration_at_suite_start
+      end
+
+      def publish_retry_summary
+        return unless configuration.display_retry_summary
+
+        ::RSpec.configuration.reporter.message(configuration.retry_summary.to_message(budget: configuration.retry_budget))
+      rescue StandardError
+        nil
+      end
+
+      def enforce_flaky_threshold!
+        count = configuration.retry_summary.flaky_examples
+        return unless (configuration.fail_on_flaky && count.positive?) || threshold_exceeded?(count)
+
+        raise FlakyThresholdExceeded, "rspec-rewind observed #{count} flaky example(s)"
+      end
+
+      def threshold_exceeded?(count)
+        max = configuration.max_flaky_examples
+        !max.nil? && count > max
+      end
+
+      def warn_on_retry_gem_conflict
+        return unless configuration.detect_retry_gem_conflicts
+        return unless Gem.loaded_specs.key?('rspec-retry') || defined?(::RSpec::Retry)
+
+        warn '[rspec-rewind] rspec-retry appears to be loaded; multiple retry hooks can interfere'
       end
     end
   end

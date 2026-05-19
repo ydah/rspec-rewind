@@ -11,6 +11,7 @@ module RSpec
 
       def notify_retry(event)
         debug("retry #{event.attempt}/#{event.retries} for #{event.example_id} in #{event.sleep_seconds.round(3)}s")
+        record_summary(event)
         publish_retry_report(event) if @configuration.report_retry_events
         invoke_callback(@configuration.retry_callback, event, 'retry callback')
       end
@@ -25,6 +26,7 @@ module RSpec
 
       def publish_not_retried(event)
         debug("not retrying #{event.example_id}: #{event.decision_reason}")
+        record_summary(event)
         publish_retry_report(event) if @configuration.report_retry_events
         invoke_callback(@configuration.not_retried_callback, event, 'not_retried callback')
       rescue StandardError => e
@@ -34,6 +36,7 @@ module RSpec
       end
 
       def publish_flaky(event)
+        record_summary(event)
         publish_flaky_report(event)
         invoke_callback(@configuration.flaky_callback, event, 'flaky callback')
       end
@@ -55,6 +58,14 @@ module RSpec
         raise if @configuration.strict_callbacks
 
         debug("failed to record retry event: #{e.class}: #{e.message}")
+      end
+
+      def record_summary(event)
+        @configuration.retry_summary.record(event)
+      rescue StandardError => e
+        raise if @configuration.strict_callbacks
+
+        debug("failed to record retry summary: #{e.class}: #{e.message}")
       end
 
       def publish_flaky_report(event)

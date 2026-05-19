@@ -12,7 +12,10 @@ module RSpec
                   :flaky_report_path, :retry_if_mode, :retry_on_default, :report_retry_events,
                   :strict_callbacks, :strict_callable_arity, :metadata_report_keys, :max_retries,
                   :max_elapsed_time, :max_total_sleep, :sleeper, :clock, :dry_run,
-                  :strict_matcher_validation, :reset_failure_policy
+                  :strict_matcher_validation, :reset_failure_policy, :retry_summary,
+                  :display_retry_summary, :fail_on_flaky, :max_flaky_examples,
+                  :freeze_configuration_at_suite_start, :warn_on_delay_conflict,
+                  :detect_retry_gem_conflicts
 
       def initialize
         self.default_retries = 0
@@ -26,9 +29,16 @@ module RSpec
         self.not_retried_callback = nil
         self.before_retry = nil
         self.after_retry = nil
+        self.retry_summary = RetrySummary.new
         self.verbose = false
         self.display_retry_failure_messages = false
         self.display_retry_backtrace_top = false
+        self.display_retry_summary = false
+        self.fail_on_flaky = false
+        self.max_flaky_examples = nil
+        self.freeze_configuration_at_suite_start = false
+        self.warn_on_delay_conflict = true
+        self.detect_retry_gem_conflicts = true
         self.clear_lets_on_failure = true
         self.reset_failure_policy = :raise
         self.retry_budget = nil
@@ -96,6 +106,13 @@ module RSpec
         @after_retry = normalize_callable(callable, field: 'after_retry')
       end
 
+      def retry_summary=(summary)
+        raise ArgumentError, 'retry_summary must respond to #record and #reset!' unless summary.respond_to?(:record) &&
+                                                                                      summary.respond_to?(:reset!)
+
+        @retry_summary = summary
+      end
+
       def verbose=(value)
         @verbose = normalize_boolean(value, field: 'verbose')
       end
@@ -106,6 +123,30 @@ module RSpec
 
       def display_retry_backtrace_top=(value)
         @display_retry_backtrace_top = normalize_boolean(value, field: 'display_retry_backtrace_top')
+      end
+
+      def display_retry_summary=(value)
+        @display_retry_summary = normalize_boolean(value, field: 'display_retry_summary')
+      end
+
+      def fail_on_flaky=(value)
+        @fail_on_flaky = normalize_boolean(value, field: 'fail_on_flaky')
+      end
+
+      def max_flaky_examples=(value)
+        @max_flaky_examples = value.nil? ? nil : parse_non_negative_integer(value, source: 'max_flaky_examples')
+      end
+
+      def freeze_configuration_at_suite_start=(value)
+        @freeze_configuration_at_suite_start = normalize_boolean(value, field: 'freeze_configuration_at_suite_start')
+      end
+
+      def warn_on_delay_conflict=(value)
+        @warn_on_delay_conflict = normalize_boolean(value, field: 'warn_on_delay_conflict')
+      end
+
+      def detect_retry_gem_conflicts=(value)
+        @detect_retry_gem_conflicts = normalize_boolean(value, field: 'detect_retry_gem_conflicts')
       end
 
       def clear_lets_on_failure=(value)
@@ -192,7 +233,6 @@ module RSpec
       def snapshot
         dup.freeze
       end
-
     end
   end
 end

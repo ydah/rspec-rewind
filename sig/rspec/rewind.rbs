@@ -2,6 +2,8 @@ module RSpec
   module Rewind
     VERSION: String
     EVENT_SCHEMA_VERSION: Integer
+    PUBLIC_API: Array[untyped]
+    INTERNAL_API: Array[untyped]
 
     class << self
       def configuration: () -> Configuration
@@ -11,6 +13,11 @@ module RSpec
       def installed?: () -> bool
       def auto_install_disabled?: () -> bool
       def close_reporter: () -> void
+      def prepare_suite!: () -> void
+      def publish_retry_summary: () -> void
+      def enforce_flaky_threshold!: () -> void
+      def threshold_exceeded?: (Integer count) -> bool
+      def warn_on_retry_gem_conflict: () -> nil
     end
 
     module Backoff
@@ -47,6 +54,13 @@ module RSpec
       attr_reader strict_callbacks: bool
       attr_reader strict_callable_arity: bool
       attr_reader strict_matcher_validation: bool
+      attr_reader retry_summary: RetrySummary
+      attr_reader display_retry_summary: bool
+      attr_reader fail_on_flaky: bool
+      attr_reader max_flaky_examples: Integer?
+      attr_reader freeze_configuration_at_suite_start: bool
+      attr_reader warn_on_delay_conflict: bool
+      attr_reader detect_retry_gem_conflicts: bool
       attr_reader metadata_report_keys: Array[Symbol]
       attr_reader max_retries: Integer?
       attr_reader max_elapsed_time: Float?
@@ -66,9 +80,16 @@ module RSpec
       def not_retried_callback=: (untyped?) -> untyped?
       def before_retry=: (untyped?) -> untyped?
       def after_retry=: (untyped?) -> untyped?
+      def retry_summary=: (untyped) -> untyped
       def verbose=: (bool) -> bool
       def display_retry_failure_messages=: (bool) -> bool
       def display_retry_backtrace_top=: (bool) -> bool
+      def display_retry_summary=: (bool) -> bool
+      def fail_on_flaky=: (bool) -> bool
+      def max_flaky_examples=: (untyped?) -> Integer?
+      def freeze_configuration_at_suite_start=: (bool) -> bool
+      def warn_on_delay_conflict=: (bool) -> bool
+      def detect_retry_gem_conflicts=: (bool) -> bool
       def clear_lets_on_failure=: (bool) -> bool
       def reset_failure_policy=: (Symbol | String) -> Symbol
       def retry_budget=: (RetryBudget | untyped) -> RetryBudget
@@ -88,6 +109,21 @@ module RSpec
       def clock=: (untyped?) -> untyped?
       def dry_run=: (bool) -> bool
       def snapshot: () -> Configuration
+    end
+
+    class FlakyThresholdExceeded < ::StandardError
+    end
+
+    class RetrySummary
+      attr_reader retry_events: Integer
+      attr_reader flaky_examples: Integer
+      attr_reader not_retried_events: Integer
+      attr_reader sleep_seconds: Float
+
+      def initialize: () -> void
+      def record: (Event event) -> untyped
+      def reset!: () -> void
+      def to_message: (budget: untyped) -> String
     end
 
     class BudgetDecision < ::Struct
@@ -237,7 +273,7 @@ module RSpec
         attr_accessor failure_fingerprint: String?
       end
 
-      def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?, example: untyped) -> void
+      def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?, example: untyped, ?warn: untyped) -> void
       def resolve: (
         retry_number: Integer,
         backoff: untyped,
@@ -392,8 +428,17 @@ module RSpec
       ) -> void
     end
 
+    class RunnerComponentFactory
+      def build: (
+        example: untyped,
+        configuration: Configuration,
+        context: ExampleContext,
+        logger: RunnerLogger
+      ) -> RunnerComponents
+    end
+
     class Runner
-      def initialize: (example: untyped, configuration: Configuration) -> void
+      def initialize: (example: untyped, configuration: Configuration, ?component_factory: RunnerComponentFactory) -> void
       def run: (?retries: untyped, ?backoff: untyped, ?wait: untyped, ?retry_on: untyped, ?skip_retry_on: untyped, ?retry_if: untyped) -> void
     end
   end

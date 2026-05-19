@@ -18,6 +18,12 @@ RSpec.describe RSpec::Rewind::Configuration do
         verbose: false,
         display_retry_failure_messages: false,
         display_retry_backtrace_top: false,
+        display_retry_summary: false,
+        fail_on_flaky: false,
+        max_flaky_examples: nil,
+        freeze_configuration_at_suite_start: false,
+        warn_on_delay_conflict: true,
+        detect_retry_gem_conflicts: true,
         clear_lets_on_failure: true,
         reset_failure_policy: :raise,
         retry_if_mode: :override,
@@ -34,6 +40,7 @@ RSpec.describe RSpec::Rewind::Configuration do
       )
       expect(config.backoff).to respond_to(:call)
       expect(config.retry_budget).to be_a(RSpec::Rewind::RetryBudget)
+      expect(config.retry_summary).to be_a(RSpec::Rewind::RetrySummary)
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::NullReporter)
       expect(config.sleeper).to respond_to(:call)
       expect(config.clock).to respond_to(:call)
@@ -187,8 +194,17 @@ RSpec.describe RSpec::Rewind::Configuration do
       config = described_class.new
 
       expect { config.max_retries = -1 }.to raise_error(ArgumentError, /max_retries must be >= 0/)
+      expect { config.max_flaky_examples = -1 }.to raise_error(ArgumentError, /max_flaky_examples must be >= 0/)
       expect { config.max_elapsed_time = -0.1 }.to raise_error(ArgumentError, /max_elapsed_time must be >= 0/)
       expect { config.max_total_sleep = 'slow' }.to raise_error(ArgumentError, /max_total_sleep must be a numeric/)
+    end
+
+    it 'raises when retry_summary does not expose the expected interface' do
+      config = described_class.new
+
+      expect do
+        config.retry_summary = Object.new
+      end.to raise_error(ArgumentError, /retry_summary must respond to #record and #reset!/)
     end
   end
 

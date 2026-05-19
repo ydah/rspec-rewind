@@ -48,6 +48,19 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(event.attempt).to eq(1)
   end
 
+  it 'records retry summary events' do
+    runner, _example, config = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: ->(config) { config.sleeper = ->(_seconds) {} }
+    )
+
+    runner.run(wait: 0.01)
+
+    expect(config.retry_summary.retry_events).to eq(1)
+    expect(config.retry_summary.flaky_examples).to eq(1)
+  end
+
   it 'emits not_retried callback with a decision reason' do
     callback_events = []
 

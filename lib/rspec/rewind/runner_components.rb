@@ -29,7 +29,8 @@ module RSpec
         retry_delay_resolver = RetryDelayResolver.new(
           configuration: configuration,
           metadata: context.metadata,
-          example: example
+          example: example,
+          warn: logger.method(:reporter_message)
         )
 
         @retry_count_resolver = RetryCountResolver.new(

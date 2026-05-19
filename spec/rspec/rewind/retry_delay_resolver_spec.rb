@@ -60,6 +60,38 @@ RSpec.describe RSpec::Rewind::RetryDelayResolver do
     )
   end
 
+  it 'warns when wait and backoff are both configured' do
+    warnings = []
+    configuration = RSpec::Rewind::Configuration.new
+    resolver = described_class.new(
+      configuration: configuration,
+      metadata: { rewind_wait: 0.1, rewind_backoff: ->(**_) { 0.2 } },
+      example: example,
+      warn: ->(message) { warnings << message }
+    )
+
+    delay = resolver.resolve(retry_number: 1, backoff: nil, wait: nil, exception: RuntimeError.new('x'))
+
+    expect(delay).to eq(0.1)
+    expect(warnings).to contain_exactly(include('wait and backoff are both configured'))
+  end
+
+  it 'can suppress delay conflict warnings' do
+    warnings = []
+    configuration = RSpec::Rewind::Configuration.new
+    configuration.warn_on_delay_conflict = false
+    resolver = described_class.new(
+      configuration: configuration,
+      metadata: { rewind_wait: 0.1, rewind_backoff: ->(**_) { 0.2 } },
+      example: example,
+      warn: ->(message) { warnings << message }
+    )
+
+    resolver.resolve(retry_number: 1, backoff: nil, wait: nil, exception: RuntimeError.new('x'))
+
+    expect(warnings).to be_empty
+  end
+
   it 'raises for non-callable, non-numeric strategy' do
     resolver = build_resolver(configure: ->(config) { config.backoff = 0.3 })
 
