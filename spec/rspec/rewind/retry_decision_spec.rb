@@ -155,11 +155,28 @@ RSpec.describe RSpec::Rewind::RetryDecision do
   end
 
   it 'passes retry context to three-argument predicates' do
-    context = RSpec::Rewind::RetryContext.new(attempt: 2, retries: 3)
+    context = RSpec::Rewind::RetryContext.new(
+      attempt: 2,
+      retries: 3,
+      elapsed_time: 15,
+      sleep_total: 2
+    )
     decision = build_decision(
-      retry_if: ->(_exception, _example, retry_context) { retry_context.attempt == 2 },
+      retry_if: lambda { |_exception, _example, retry_context|
+        retry_context.attempt == 2 &&
+          retry_context.elapsed_time == 15 &&
+          retry_context.sleep_total == 2
+      },
       context: context
     )
+
+    expect(decision.retry?).to be(true)
+  end
+
+  it 'passes retry context to three-argument callable matchers' do
+    context = RSpec::Rewind::RetryContext.new(attempt: 2, retries: 3)
+    matcher = ->(_exception, _example, retry_context) { retry_context.retries == 3 }
+    decision = build_decision(retry_on: [matcher], context: context)
 
     expect(decision.retry?).to be(true)
   end

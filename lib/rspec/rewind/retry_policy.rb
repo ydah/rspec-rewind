@@ -27,7 +27,9 @@ module RSpec
         retry_if:,
         retry_number: nil,
         resolved_retries: nil,
-        budget_remaining: nil
+        budget_remaining: nil,
+        elapsed_time: nil,
+        sleep_total: nil
       )
         RetryDecision.new(
           exception: exception,
@@ -41,6 +43,8 @@ module RSpec
             retry_number: retry_number,
             resolved_retries: resolved_retries,
             budget_remaining: budget_remaining,
+            elapsed_time: elapsed_time,
+            sleep_total: sleep_total,
             exception: exception
           )
         ).decision
@@ -127,13 +131,15 @@ module RSpec
         )
       end
 
-      def retry_context(retry_number:, resolved_retries:, budget_remaining:, exception:)
+      def retry_context(retry_number:, resolved_retries:, budget_remaining:, elapsed_time:, sleep_total:, exception:)
         RetryContext.new(
           attempt: retry_number,
           retries: resolved_retries,
           metadata: @metadata,
           budget_remaining: budget_remaining,
-          failure_fingerprint: failure_fingerprint(exception)
+          failure_fingerprint: failure_fingerprint(exception),
+          elapsed_time: elapsed_time,
+          sleep_total: sleep_total
         )
       end
 

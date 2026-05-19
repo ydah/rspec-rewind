@@ -69,6 +69,19 @@ RSpec.describe RSpec::Rewind::RetryGate do
     expect(debug_messages).to be_empty
   end
 
+  it 'passes elapsed and sleep totals into retry policy context' do
+    allow(retry_policy).to receive(:decision).and_return(policy_decision(true))
+    allow(retry_budget).to receive(:consume).and_return(budget_decision(true, remaining: 4))
+
+    allow_retry?(elapsed_time: 1.25, sleep_total: 0.5)
+
+    expect(retry_policy).to have_received(:decision).with(hash_including(
+                                                            budget_remaining: Float::INFINITY,
+                                                            elapsed_time: 1.25,
+                                                            sleep_total: 0.5
+                                                          ))
+  end
+
   it 'returns a budget exhausted decision with budget state' do
     allow(retry_policy).to receive(:decision).and_return(policy_decision(true))
     allow(retry_budget).to receive(:consume).and_return(budget_decision(false, limit: 1, used: 1, remaining: 0))

@@ -239,6 +239,8 @@ module RSpec
       attr_accessor metadata: Hash[Symbol, untyped]?
       attr_accessor budget_remaining: Integer | Float | nil
       attr_accessor failure_fingerprint: String?
+      attr_accessor elapsed_time: Numeric?
+      attr_accessor sleep_total: Numeric?
     end
 
     class RetryDecision
@@ -266,7 +268,9 @@ module RSpec
         retry_if: untyped?,
         ?retry_number: Integer?,
         ?resolved_retries: Integer?,
-        ?budget_remaining: Integer | Float | nil
+        ?budget_remaining: Integer | Float | nil,
+        ?elapsed_time: Numeric?,
+        ?sleep_total: Numeric?
       ) -> RetryDecisionResult
     end
 

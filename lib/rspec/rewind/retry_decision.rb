@@ -21,6 +21,8 @@ module RSpec
       :metadata,
       :budget_remaining,
       :failure_fingerprint,
+      :elapsed_time,
+      :sleep_total,
       keyword_init: true
     )
 

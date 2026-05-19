@@ -110,6 +110,25 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
     expect(allowed).to be(true)
   end
 
+  it 'passes elapsed and sleep totals to retry_if context' do
+    policy = build_policy
+
+    decision = policy.decision(
+      exception: RuntimeError.new('boom'),
+      retry_on: [RuntimeError],
+      skip_retry_on: nil,
+      retry_if: lambda { |_exception, _example, context|
+        context.elapsed_time == 125 && context.sleep_total == 50
+      },
+      retry_number: 1,
+      resolved_retries: 2,
+      elapsed_time: 125,
+      sleep_total: 50
+    )
+
+    expect(decision).to be_allowed
+  end
+
   it 'can override retry_if mode from metadata' do
     policy = build_policy(
       metadata: {

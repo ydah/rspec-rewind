@@ -67,7 +67,9 @@ module RSpec
           retry_if: retry_if,
           retry_number: retry_number,
           resolved_retries: resolved_retries,
-          budget_remaining: budget_remaining
+          budget_remaining: budget_remaining,
+          elapsed_time: elapsed_time,
+          sleep_total: sleep_total
         )
         return rejected(policy_decision.reason, policy_decision: policy_decision) unless policy_decision.allowed?
 
