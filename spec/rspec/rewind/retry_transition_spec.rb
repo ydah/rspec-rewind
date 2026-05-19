@@ -37,6 +37,53 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     expect(context[:sleep_calls]).to be_empty
   end
 
+  it 'publishes a reset_failed event and continues when reset failure policy allows it' do
+    params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 0.0)
+    reset_exception = RuntimeError.new('reset failed')
+    transition, _resolver, builder, notifier, resetter, = build_transition(
+      display_retry_failure_messages: false,
+      resolved_sleep: 0.0
+    )
+    event = instance_double(RSpec::Rewind::Event)
+    allow(builder).to receive(:build).and_return(event)
+    allow(resetter).to receive(:reset).and_return(false)
+    allow(resetter).to receive(:last_exception).and_return(reset_exception)
+
+    transition.perform(**params)
+
+    expect(builder).to have_received(:build).with(hash_including(
+                                                   status: :reset_failed,
+                                                   retry_reason: :state_reset,
+                                                   decision_reason: :state_reset_failed,
+                                                   exception: reset_exception
+                                                 ))
+    expect(notifier).to have_received(:publish_reset_failed).with(event)
+    expect(notifier).to have_received(:notify_retry).with(event)
+  end
+
+  it 'publishes a reset_failed event before reraising reset errors' do
+    params = retry_params(resolved_retries: 1, duration: 0.1, backoff: nil, wait: 0.0)
+    reset_exception = RuntimeError.new('reset failed')
+    transition, _resolver, builder, notifier, resetter, = build_transition(
+      display_retry_failure_messages: false,
+      resolved_sleep: 0.0
+    )
+    event = instance_double(RSpec::Rewind::Event)
+    allow(builder).to receive(:build).and_return(event)
+    allow(resetter).to receive(:reset).and_raise(reset_exception)
+
+    expect { transition.perform(**params) }.to raise_error(reset_exception)
+
+    expect(builder).to have_received(:build).with(hash_including(
+                                                   status: :reset_failed,
+                                                   retry_reason: :state_reset,
+                                                   decision_reason: :state_reset_failed,
+                                                   exception: reset_exception
+                                                 ))
+    expect(notifier).to have_received(:publish_reset_failed).with(event)
+    expect(notifier).not_to have_received(:notify_retry)
+  end
+
   def retry_params(resolved_retries:, duration:, backoff:, wait:)
     {
       retry_number: 1,

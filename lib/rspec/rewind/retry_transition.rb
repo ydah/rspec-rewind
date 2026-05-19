@@ -2,11 +2,7 @@
 
 module RSpec
   module Rewind
-    SleepMeasurement = Struct.new(
-      :scheduled,
-      :actual,
-      keyword_init: true
-    )
+    SleepMeasurement = Struct.new(:scheduled, :actual, keyword_init: true)
 
     class RetryTransition
       def initialize(configuration:, retry_delay_resolver:, event_builder:, notifier:, state_resetter:, sleep:)
@@ -43,38 +39,38 @@ module RSpec
           failure_fingerprint: failure_fingerprint
         )
 
-        scheduled_event = build_event(
+        event_context = {
           retry_number: retry_number,
           resolved_retries: resolved_retries,
           duration: duration,
-          exception: exception,
           sleep_seconds: sleep_seconds,
           total_duration: total_duration,
           attempt_durations: attempt_durations,
           sleep_total: sleep_total,
-          scheduled_sleep_seconds: sleep_seconds,
-          actual_sleep_seconds: nil,
           budget_decision: budget_decision,
           policy_decision: policy_decision
+        }
+
+        scheduled_event = build_event(
+          exception: exception,
+          scheduled_sleep_seconds: sleep_seconds,
+          actual_sleep_seconds: nil,
+          **event_context
         )
         @notifier.notify_before_retry(scheduled_event)
         @notifier.show_failure_message(exception) if @configuration.display_retry_failure_messages
-        @state_resetter.reset(example_source)
+        reset_example_state(
+          example_source: example_source,
+          retry_exception: exception,
+          **event_context
+        )
         actual_sleep_seconds = sleep_if_needed(sleep_seconds)
 
         event = build_event(
-          retry_number: retry_number,
-          resolved_retries: resolved_retries,
-          duration: duration,
           exception: exception,
-          sleep_seconds: sleep_seconds,
-          total_duration: total_duration,
-          attempt_durations: attempt_durations,
-          sleep_total: sleep_total + actual_sleep_seconds,
           scheduled_sleep_seconds: sleep_seconds,
           actual_sleep_seconds: actual_sleep_seconds,
-          budget_decision: budget_decision,
-          policy_decision: policy_decision
+          **event_context.merge(sleep_total: sleep_total + actual_sleep_seconds)
         )
 
         @notifier.notify_retry(event)
@@ -119,33 +115,69 @@ module RSpec
 
       private
 
-      def build_event(
-        retry_number:,
-        resolved_retries:,
-        duration:,
-        exception:,
-        sleep_seconds:,
-        total_duration:,
-        attempt_durations:,
-        sleep_total:,
-        scheduled_sleep_seconds:,
-        actual_sleep_seconds:,
-        budget_decision:,
-        policy_decision:
-      )
+      def reset_example_state(example_source:, retry_exception:, **event_context)
+        reset_result = @state_resetter.reset(example_source)
+        return unless reset_result == false
+
+        publish_reset_failed(
+          reset_exception: state_reset_exception || retry_exception,
+          **event_context
+        )
+      rescue StandardError => e
+        publish_reset_failed(
+          reset_exception: e,
+          **event_context
+        )
+        raise
+      end
+
+      def publish_reset_failed(reset_exception:, **event_context)
+        policy_decision = event_context[:policy_decision]
+        sleep_seconds = event_context[:sleep_seconds]
+        event = @event_builder.build(
+          status: :reset_failed,
+          retry_reason: :state_reset,
+          decision_reason: :state_reset_failed,
+          attempt: event_context[:retry_number],
+          retries: event_context[:resolved_retries],
+          duration: event_context[:duration],
+          total_duration: event_context[:total_duration],
+          attempt_durations: event_context[:attempt_durations],
+          sleep_seconds: sleep_seconds,
+          scheduled_sleep_seconds: sleep_seconds,
+          actual_sleep_seconds: 0.0,
+          sleep_total: event_context[:sleep_total],
+          budget_decision: event_context[:budget_decision],
+          matched_retry_on: policy_decision&.matched_retry_on,
+          matched_skip_retry_on: policy_decision&.matched_skip_retry_on,
+          matcher_error: policy_decision&.matcher_error,
+          exception: reset_exception
+        )
+
+        @notifier.publish_reset_failed(event)
+      end
+
+      def state_reset_exception
+        return nil unless @state_resetter.respond_to?(:last_exception)
+
+        @state_resetter.last_exception
+      end
+
+      def build_event(exception:, scheduled_sleep_seconds:, actual_sleep_seconds:, **event_context)
+        policy_decision = event_context[:policy_decision]
         @event_builder.build(
           status: :retrying,
           retry_reason: :exception,
-          attempt: retry_number,
-          retries: resolved_retries,
-          duration: duration,
-          total_duration: total_duration,
-          attempt_durations: attempt_durations,
-          sleep_seconds: sleep_seconds,
+          attempt: event_context[:retry_number],
+          retries: event_context[:resolved_retries],
+          duration: event_context[:duration],
+          total_duration: event_context[:total_duration],
+          attempt_durations: event_context[:attempt_durations],
+          sleep_seconds: event_context[:sleep_seconds],
           scheduled_sleep_seconds: scheduled_sleep_seconds,
           actual_sleep_seconds: actual_sleep_seconds,
-          sleep_total: sleep_total,
-          budget_decision: budget_decision,
+          sleep_total: event_context[:sleep_total],
+          budget_decision: event_context[:budget_decision],
           matched_retry_on: policy_decision&.matched_retry_on,
           matched_skip_retry_on: policy_decision&.matched_skip_retry_on,
           matcher_error: policy_decision&.matcher_error,

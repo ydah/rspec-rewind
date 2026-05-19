@@ -3,7 +3,7 @@
 require 'spec_helper'
 
 RSpec.describe RSpec::Rewind::RetrySummary do
-  it 'summarizes retry, flaky, and not retried events' do
+  it 'summarizes retry, flaky, not retried, and reset failed events' do
     summary = described_class.new
     budget = RSpec::Rewind::RetryBudget.new(2)
     budget.consume!
@@ -11,12 +11,14 @@ RSpec.describe RSpec::Rewind::RetrySummary do
     summary.record(event(status: :retrying, actual_sleep_seconds: 0.25))
     summary.record(event(status: :flaky))
     summary.record(event(status: :not_retried))
+    summary.record(event(status: :reset_failed))
 
     expect(summary.to_message(budget: budget)).to include(
       '1 flaky examples',
       '1 retry attempts',
       '0.250s spent sleeping',
       '1 not retried',
+      '1 reset failures',
       'budget 1/2 used'
     )
   end

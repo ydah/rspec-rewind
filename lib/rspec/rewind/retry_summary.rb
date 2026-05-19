@@ -5,7 +5,7 @@ module RSpec
     class FlakyThresholdExceeded < StandardError; end
 
     class RetrySummary
-      attr_reader :retry_events, :flaky_examples, :not_retried_events, :sleep_seconds
+      attr_reader :retry_events, :flaky_examples, :not_retried_events, :reset_failed_events, :sleep_seconds
 
       def initialize
         reset!
@@ -21,6 +21,8 @@ module RSpec
             @flaky_examples += 1
           when :not_retried
             @not_retried_events += 1
+          when :reset_failed
+            @reset_failed_events += 1
           end
         end
       end
@@ -30,6 +32,7 @@ module RSpec
         @retry_events = 0
         @flaky_examples = 0
         @not_retried_events = 0
+        @reset_failed_events = 0
         @sleep_seconds = 0.0
       end
 
@@ -38,7 +41,8 @@ module RSpec
           "#{@flaky_examples} flaky examples",
           "#{@retry_events} retry attempts",
           "#{format('%.3f', @sleep_seconds)}s spent sleeping",
-          "#{@not_retried_events} not retried"
+          "#{@not_retried_events} not retried",
+          "#{@reset_failed_events} reset failures"
         ]
         parts << budget_message(budget)
         "[rspec-rewind] #{parts.compact.join(', ')}"

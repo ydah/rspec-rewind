@@ -35,6 +35,12 @@ module RSpec
         debug("not_retried callback failed: #{e.class}: #{e.message}")
       end
 
+      def publish_reset_failed(event)
+        debug("state reset failed for #{event.example_id}: #{event.exception_class}: #{event.exception_message}")
+        record_summary(event)
+        publish_retry_report(event) if @configuration.report_retry_events
+      end
+
       def publish_flaky(event)
         record_summary(event)
         publish_flaky_report(event)

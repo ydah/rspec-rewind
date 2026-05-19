@@ -3,8 +3,8 @@
 require 'spec_helper'
 
 RSpec.describe 'RSpec::Rewind event schema' do
-  it 'keeps the schema version stable for retry, flaky, and not_retried events' do
-    %i[retrying flaky not_retried].each do |status|
+  it 'keeps the schema version stable for retry, flaky, not_retried, and reset_failed events' do
+    %i[retrying flaky not_retried reset_failed].each do |status|
       event = RSpec::Rewind::Event.new(
         schema_version: RSpec::Rewind::EVENT_SCHEMA_VERSION,
         status: status,

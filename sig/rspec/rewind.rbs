@@ -118,6 +118,7 @@ module RSpec
       attr_reader retry_events: Integer
       attr_reader flaky_examples: Integer
       attr_reader not_retried_events: Integer
+      attr_reader reset_failed_events: Integer
       attr_reader sleep_seconds: Float
 
       def initialize: () -> void
@@ -397,6 +398,12 @@ module RSpec
       def clear_exception: (untyped) -> void
       def clear_execution_result: (untyped) -> void
       def clear_lets: (untyped) -> void
+    end
+
+    class ExampleStateResetter
+      attr_reader last_exception: StandardError?
+      def initialize: (configuration: Configuration, ?adapter: RSpecAdapter) -> void
+      def reset: (untyped) -> bool
     end
 
     class RunnerLogger
