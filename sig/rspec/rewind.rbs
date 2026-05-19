@@ -29,6 +29,10 @@ module RSpec
     module ConfigurationValidation
     end
 
+    module FailureFingerprint
+      def self.build: (Exception?) -> String?
+    end
+
     class Configuration
       attr_reader default_retries: Integer
       attr_reader backoff: Numeric | untyped

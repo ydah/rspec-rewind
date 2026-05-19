@@ -137,16 +137,10 @@ module RSpec
           retries: resolved_retries,
           metadata: @metadata,
           budget_remaining: budget_remaining,
-          failure_fingerprint: failure_fingerprint(exception),
+          failure_fingerprint: FailureFingerprint.build(exception),
           elapsed_time: elapsed_time,
           sleep_total: sleep_total
         )
-      end
-
-      def failure_fingerprint(exception)
-        return nil unless exception
-
-        [exception.class.name, exception.message, exception.backtrace&.first].join(':')
       end
 
       def validate_callable!(callable, field:)

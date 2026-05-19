@@ -99,7 +99,7 @@ module RSpec
             total_duration: monotonic_time - started_at,
             attempt_durations: attempt_durations.dup,
             sleep_total: sleep_total,
-            failure_fingerprint: failure_fingerprint(exception),
+            failure_fingerprint: FailureFingerprint.build(exception),
             budget_decision: decision.budget_decision,
             policy_decision: decision.policy_decision
           )
@@ -113,10 +113,6 @@ module RSpec
 
       def monotonic_time
         @clock.call
-      end
-
-      def failure_fingerprint(exception)
-        [exception.class.name, exception.message, exception.backtrace&.first].join(':')
       end
     end
   end

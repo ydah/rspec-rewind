@@ -42,7 +42,7 @@ module RSpec
           exception_class: exception&.class&.name,
           exception_message: exception&.message,
           exception_backtrace_top: exception&.backtrace&.first,
-          failure_fingerprint: failure_fingerprint(exception),
+          failure_fingerprint: FailureFingerprint.build(exception),
           duration: duration,
           total_duration: total_duration,
           attempt_durations: attempt_durations,
@@ -71,16 +71,6 @@ module RSpec
         value.nil? ? fallback : value
       rescue StandardError
         fallback
-      end
-
-      def failure_fingerprint(exception)
-        return nil unless exception
-
-        [
-          exception.class.name,
-          exception.message,
-          exception.backtrace&.first
-        ].join(':')
       end
 
       def filtered_metadata

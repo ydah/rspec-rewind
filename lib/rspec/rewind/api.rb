@@ -19,6 +19,7 @@ module RSpec
       ExampleContext,
       ExampleMethods,
       ExampleStateResetter,
+      FailureFingerprint,
       FlakyTransition,
       RetryCountResolver,
       RetryDelayResolver,

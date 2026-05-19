@@ -17,6 +17,7 @@ RSpec.describe 'RSpec::Rewind API boundaries' do
     expect(RSpec::Rewind::INTERNAL_API).to include(
       RSpec::Rewind::RetryLoop,
       RSpec::Rewind::RunnerComponents,
+      RSpec::Rewind::FailureFingerprint,
       RSpec::Rewind::RSpecAdapter
     )
   end
