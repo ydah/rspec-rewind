@@ -128,6 +128,8 @@ module RSpec
         warn '[rspec-rewind] rspec-retry appears to be loaded; multiple retry hooks can interfere'
       end
 
+      private
+
       def reporter_lifecycle_error(reporter)
         %i[flush close].filter_map do |method_name|
           invoke_reporter_lifecycle(reporter, method_name)

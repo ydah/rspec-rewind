@@ -18,8 +18,6 @@ module RSpec
       def enforce_flaky_threshold!: () -> void
       def threshold_exceeded?: (Integer count) -> bool
       def warn_on_retry_gem_conflict: () -> nil
-      def reporter_lifecycle_error: (untyped reporter) -> StandardError?
-      def invoke_reporter_lifecycle: (untyped reporter, Symbol method_name) -> StandardError?
     end
 
     module Backoff
