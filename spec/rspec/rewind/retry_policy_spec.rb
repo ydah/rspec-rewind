@@ -110,6 +110,28 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
     expect(allowed).to be(true)
   end
 
+  it 'can override retry_if mode from metadata' do
+    policy = build_policy(
+      metadata: {
+        rewind_if_mode: :and,
+        rewind_if: ->(_exception, _example) { true }
+      },
+      configure: lambda do |config|
+        config.retry_if_mode = :or
+        config.retry_if = ->(_exception, _example) { false }
+      end
+    )
+
+    allowed = policy.retry_allowed?(
+      exception: RuntimeError.new('boom'),
+      retry_on: [RuntimeError],
+      skip_retry_on: nil,
+      retry_if: nil
+    )
+
+    expect(allowed).to be(false)
+  end
+
   it 'can override configured retry_on matchers from metadata' do
     policy = build_policy(
       metadata: { rewind_retry_on_mode: :override, rewind_retry_on: [IOError] },
@@ -124,6 +146,61 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
     )
 
     expect(allowed).to be(false)
+  end
+
+  it 'can override configured skip_retry_on matchers from metadata' do
+    policy = build_policy(
+      metadata: { rewind_skip_retry_on_mode: :override },
+      configure: ->(config) { config.skip_retry_on = [RuntimeError] }
+    )
+
+    allowed = policy.retry_allowed?(
+      exception: RuntimeError.new('boom'),
+      retry_on: [RuntimeError],
+      skip_retry_on: nil,
+      retry_if: nil
+    )
+
+    expect(allowed).to be(true)
+  end
+
+  it 'raises when metadata retry_if mode is invalid' do
+    policy = build_policy(metadata: { rewind_if_mode: :xor })
+
+    expect do
+      policy.retry_allowed?(
+        exception: RuntimeError.new('boom'),
+        retry_on: [RuntimeError],
+        skip_retry_on: nil,
+        retry_if: nil
+      )
+    end.to raise_error(ArgumentError, /rewind_if_mode must be one of/)
+  end
+
+  it 'raises when metadata retry_on mode is invalid' do
+    policy = build_policy(metadata: { rewind_retry_on_mode: :replace })
+
+    expect do
+      policy.retry_allowed?(
+        exception: RuntimeError.new('boom'),
+        retry_on: [RuntimeError],
+        skip_retry_on: nil,
+        retry_if: nil
+      )
+    end.to raise_error(ArgumentError, /rewind_retry_on_mode must be one of/)
+  end
+
+  it 'raises when metadata skip_retry_on mode is invalid' do
+    policy = build_policy(metadata: { rewind_skip_retry_on_mode: :replace })
+
+    expect do
+      policy.retry_allowed?(
+        exception: RuntimeError.new('boom'),
+        retry_on: [RuntimeError],
+        skip_retry_on: nil,
+        retry_if: nil
+      )
+    end.to raise_error(ArgumentError, /rewind_skip_retry_on_mode must be one of/)
   end
 
   it 'raises when explicit retry_on contains unsupported matcher types' do

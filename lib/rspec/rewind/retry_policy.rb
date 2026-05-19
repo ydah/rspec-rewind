@@ -101,15 +101,30 @@ module RSpec
       end
 
       def retry_if_mode
-        (@metadata[:rewind_if_mode] || @configuration.retry_if_mode).to_sym
+        normalize_mode(
+          @metadata[:rewind_if_mode],
+          allowed: %i[override and or],
+          fallback: @configuration.retry_if_mode,
+          field: 'rewind_if_mode'
+        )
       end
 
       def retry_on_mode
-        (@metadata[:rewind_retry_on_mode] || :append).to_sym
+        normalize_mode(
+          @metadata[:rewind_retry_on_mode],
+          allowed: %i[append override],
+          fallback: :append,
+          field: 'rewind_retry_on_mode'
+        )
       end
 
       def skip_retry_on_mode
-        (@metadata[:rewind_skip_retry_on_mode] || :append).to_sym
+        normalize_mode(
+          @metadata[:rewind_skip_retry_on_mode],
+          allowed: %i[append override],
+          fallback: :append,
+          field: 'rewind_skip_retry_on_mode'
+        )
       end
 
       def retry_context(retry_number:, resolved_retries:, budget_remaining:, exception:)
@@ -147,6 +162,17 @@ module RSpec
 
       def first_non_nil(*values)
         values.find { |value| !value.nil? }
+      end
+
+      def normalize_mode(value, allowed:, fallback:, field:)
+        return fallback.to_sym if value.nil?
+
+        mode = value.to_sym
+        return mode if allowed.include?(mode)
+
+        raise ArgumentError, "#{field} must be one of: #{allowed.join(', ')}"
+      rescue NoMethodError
+        raise ArgumentError, "#{field} must be one of: #{allowed.join(', ')}"
       end
     end
   end
