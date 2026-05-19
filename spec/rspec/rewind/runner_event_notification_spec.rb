@@ -80,6 +80,17 @@ RSpec.describe RSpec::Rewind::Runner do
     )
   end
 
+  it 'swallows exceptions raised by not_retried_callback' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1, rewind_skip_retry_on: [RuntimeError] },
+      configure: ->(config) { config.not_retried_callback = ->(_event) { raise 'callback failed' } }
+    )
+
+    expect { runner.run }.not_to raise_error
+    expect(example.run_calls).to eq(1)
+  end
+
   it 'optionally records retrying and not_retried events to the reporter' do
     reporter = RunnerSpecSupport::CollectingReporter.new
 

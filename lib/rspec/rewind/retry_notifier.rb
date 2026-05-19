@@ -29,10 +29,6 @@ module RSpec
         record_summary(event)
         publish_retry_report(event) if @configuration.report_retry_events
         invoke_callback(@configuration.not_retried_callback, event, 'not_retried callback')
-      rescue StandardError => e
-        raise if @configuration.strict_callbacks
-
-        debug("not_retried callback failed: #{e.class}: #{e.message}")
       end
 
       def publish_reset_failed(event)
