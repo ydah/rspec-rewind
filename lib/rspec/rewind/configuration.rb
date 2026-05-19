@@ -231,8 +231,25 @@ module RSpec
         @dry_run = normalize_boolean(value, field: 'dry_run')
       end
 
+      def freeze
+        freeze_mutable_policy_state
+        super
+      end
+
       def snapshot
-        dup.freeze
+        copy = dup
+        copy.instance_variable_set(:@retry_on, @retry_on.dup)
+        copy.instance_variable_set(:@skip_retry_on, @skip_retry_on.dup)
+        copy.instance_variable_set(:@metadata_report_keys, @metadata_report_keys.dup)
+        copy.freeze
+      end
+
+      private
+
+      def freeze_mutable_policy_state
+        @retry_on.freeze
+        @skip_retry_on.freeze
+        @metadata_report_keys.freeze
       end
     end
   end

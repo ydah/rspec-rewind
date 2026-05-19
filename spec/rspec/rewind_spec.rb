@@ -56,6 +56,7 @@ RSpec.describe RSpec::Rewind do
 
       expect(described_class.configuration.retry_summary.flaky_examples).to eq(0)
       expect(described_class.configuration).to be_frozen
+      expect(described_class.configuration.retry_on).to be_frozen
     end
   end
 

@@ -237,4 +237,32 @@ RSpec.describe RSpec::Rewind::Configuration do
       end.to raise_error(ArgumentError, /flaky_reporter must respond to #record/)
     end
   end
+
+  describe '#freeze' do
+    it 'freezes mutable policy arrays' do
+      config = described_class.new
+      config.retry_on = [RuntimeError]
+      config.skip_retry_on = [IOError]
+      config.metadata_report_keys = %i[file_path type]
+
+      config.freeze
+
+      expect { config.retry_on << StandardError }.to raise_error(FrozenError)
+      expect { config.skip_retry_on << NoMethodError }.to raise_error(FrozenError)
+      expect { config.metadata_report_keys << :js }.to raise_error(FrozenError)
+    end
+  end
+
+  describe '#snapshot' do
+    it 'returns a frozen copy without freezing the original policy arrays' do
+      config = described_class.new
+      config.retry_on = [RuntimeError]
+
+      snapshot = config.snapshot
+
+      expect(snapshot).to be_frozen
+      expect { snapshot.retry_on << StandardError }.to raise_error(FrozenError)
+      expect { config.retry_on << IOError }.not_to raise_error
+    end
+  end
 end
