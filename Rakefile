@@ -3,6 +3,7 @@
 require 'bundler/gem_tasks'
 require 'rbconfig'
 require 'rspec/core/rake_task'
+require 'tmpdir'
 RSpec::Core::RakeTask.new(:spec)
 
 desc 'Syntax check Ruby source and specs'
@@ -21,6 +22,26 @@ task :rubocop do
   sh 'bundle exec rubocop'
 end
 
+desc 'Build, install, and require the packaged gem'
+task install_smoke: :build do
+  gem_path = FileList['pkg/rspec-rewind-*.gem'].max_by { |path| File.mtime(path) }
+  abort 'built gem was not found under pkg/' unless gem_path
+
+  Dir.mktmpdir('rspec-rewind-gem-home') do |gem_home|
+    env = {
+      'BUNDLE_GEMFILE' => nil,
+      'GEM_HOME' => gem_home,
+      'GEM_PATH' => ([gem_home] + Gem.path).join(File::PATH_SEPARATOR),
+      'RUBYOPT' => nil
+    }
+
+    Bundler.with_unbundled_env do
+      sh env, 'gem', 'install', gem_path, '--local', '--no-document', '--install-dir', gem_home, '--ignore-dependencies'
+      sh env, RbConfig.ruby, '-e', install_smoke_script
+    end
+  end
+end
+
 desc 'Run focused mutation tests for retry policy code when mutant is installed'
 task :mutation do
   unless system('bundle exec mutant --version', out: File::NULL, err: File::NULL)
@@ -33,3 +54,11 @@ task :mutation do
 end
 
 task default: %i[spec rbs]
+
+def install_smoke_script
+  <<~RUBY
+    gem 'rspec-rewind'
+    require 'rspec/rewind/core'
+    abort 'rspec-rewind version was not loaded' unless RSpec::Rewind::VERSION
+  RUBY
+end

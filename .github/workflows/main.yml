@@ -136,7 +136,5 @@ jobs:
         run: bundle exec rake rubocop
       - name: Coverage
         run: COVERAGE=1 bundle exec rspec
-      - name: Build gem
-        run: bundle exec rake build
-      - name: Install built gem
-        run: gem install pkg/rspec-rewind-*.gem --local --no-document
+      - name: Install smoke
+        run: bundle exec rake install_smoke
