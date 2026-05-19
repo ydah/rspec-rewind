@@ -5,10 +5,10 @@ module RSpec
     class Runner
       def initialize(example:, configuration:, component_factory: RunnerComponentFactory.new)
         @example = example
-        @configuration = configuration
+        @configuration = configuration.snapshot
         @component_factory = component_factory
         @context = ExampleContext.new(example: example)
-        @logger = RunnerLogger.new(configuration: configuration, warn_output: method(:warn))
+        @logger = RunnerLogger.new(configuration: @configuration, warn_output: method(:warn))
       end
 
       def run(retries: nil, backoff: nil, wait: nil, retry_on: nil, skip_retry_on: nil, retry_if: nil)

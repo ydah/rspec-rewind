@@ -192,6 +192,18 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
+  it 'uses a configuration snapshot captured when the runner is built' do
+    runner, example, config = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      configure: ->(config) { config.default_retries = 1 }
+    )
+
+    config.default_retries = 0
+    runner.run
+
+    expect(example.run_calls).to eq(2)
+  end
+
   it 'uses RSPEC_REWIND_RETRIES env var before explicit retries' do
     original = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
     ENV['RSPEC_REWIND_RETRIES'] = '0'
