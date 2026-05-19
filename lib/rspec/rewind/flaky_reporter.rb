@@ -21,33 +21,31 @@ module RSpec
       end
 
       class JsonlReporter
+        attr_reader :path
+
         def initialize(path)
           @path = path
           @mutex = Mutex.new
         end
 
         def record(event)
-          payload = {
-            schema_version: event.schema_version,
-            status: event.status,
-            retry_reason: event.retry_reason,
-            example_id: event.example_id,
-            description: event.description,
-            location: event.location,
-            attempt: event.attempt,
-            retries: event.retries,
-            exception_class: event.exception_class,
-            exception_message: event.exception_message,
-            duration: event.duration,
-            sleep_seconds: event.sleep_seconds,
-            timestamp: event.timestamp
-          }
+          payload = event.respond_to?(:to_h) ? event.to_h : {}
 
           @mutex.synchronize do
             FileUtils.mkdir_p(File.dirname(@path))
-            File.open(@path, 'a') { |file| file.puts(JSON.generate(payload)) }
+            File.open(@path, 'a') do |file|
+              file.flock(File::LOCK_EX)
+              file.puts(JSON.generate(payload))
+              file.flush
+            ensure
+              file&.flock(File::LOCK_UN)
+            end
           end
         end
+
+        def flush; end
+
+        def close; end
       end
     end
   end

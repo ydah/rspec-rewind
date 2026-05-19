@@ -8,12 +8,18 @@ module RSpec
       def configure: () { (Configuration) -> void } -> void
       def reset_configuration!: () -> Configuration
       def install!: () -> bool?
+      def installed?: () -> bool
+      def auto_install_disabled?: () -> bool
+      def close_reporter: () -> void
     end
 
     module Backoff
       def self.fixed: (Numeric seconds) -> untyped
       def self.linear: (step: Numeric, ?max: Numeric?) -> untyped
-      def self.exponential: (base: Numeric, ?factor: Numeric, ?max: Numeric?, ?jitter: Numeric) -> untyped
+      def self.exponential: (base: Numeric, ?factor: Numeric, ?max: Numeric?, ?jitter: Numeric, ?rng: untyped, ?min_factor: Numeric) -> untyped
+    end
+
+    module ConfigurationValidation
     end
 
     class Configuration
@@ -24,11 +30,30 @@ module RSpec
       attr_reader retry_if: untyped?
       attr_reader retry_callback: untyped?
       attr_reader flaky_callback: untyped?
+      attr_reader not_retried_callback: untyped?
+      attr_reader before_retry: untyped?
+      attr_reader after_retry: untyped?
       attr_reader verbose: bool
       attr_reader display_retry_failure_messages: bool
+      attr_reader display_retry_backtrace_top: bool
       attr_reader clear_lets_on_failure: bool
+      attr_reader reset_failure_policy: Symbol
       attr_reader retry_budget: RetryBudget
       attr_reader flaky_reporter: FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped
+      attr_reader flaky_report_path: String?
+      attr_reader retry_if_mode: Symbol
+      attr_reader retry_on_default: Symbol
+      attr_reader report_retry_events: bool
+      attr_reader strict_callbacks: bool
+      attr_reader strict_callable_arity: bool
+      attr_reader strict_matcher_validation: bool
+      attr_reader metadata_report_keys: Array[Symbol]
+      attr_reader max_retries: Integer?
+      attr_reader max_elapsed_time: Float?
+      attr_reader max_total_sleep: Float?
+      attr_reader sleeper: untyped
+      attr_reader clock: untyped
+      attr_reader dry_run: bool
 
       def initialize: () -> void
       def default_retries=: (untyped) -> Integer
@@ -38,12 +63,39 @@ module RSpec
       def retry_if=: (untyped?) -> untyped?
       def retry_callback=: (untyped?) -> untyped?
       def flaky_callback=: (untyped?) -> untyped?
+      def not_retried_callback=: (untyped?) -> untyped?
+      def before_retry=: (untyped?) -> untyped?
+      def after_retry=: (untyped?) -> untyped?
       def verbose=: (bool) -> bool
       def display_retry_failure_messages=: (bool) -> bool
+      def display_retry_backtrace_top=: (bool) -> bool
       def clear_lets_on_failure=: (bool) -> bool
+      def reset_failure_policy=: (Symbol | String) -> Symbol
       def retry_budget=: (RetryBudget | untyped) -> RetryBudget
       def flaky_reporter=: (FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped?) -> FlakyReporter::NullReporter | FlakyReporter::JsonlReporter | untyped
       def flaky_report_path=: (String?) -> FlakyReporter::NullReporter | FlakyReporter::JsonlReporter
+      def retry_if_mode=: (Symbol | String) -> Symbol
+      def retry_on_default=: (Symbol | String) -> Symbol
+      def report_retry_events=: (bool) -> bool
+      def strict_callbacks=: (bool) -> bool
+      def strict_callable_arity=: (bool) -> bool
+      def strict_matcher_validation=: (bool) -> bool
+      def metadata_report_keys=: (untyped) -> Array[Symbol]
+      def max_retries=: (untyped?) -> Integer?
+      def max_elapsed_time=: (untyped?) -> Float?
+      def max_total_sleep=: (untyped?) -> Float?
+      def sleeper=: (untyped?) -> untyped?
+      def clock=: (untyped?) -> untyped?
+      def dry_run=: (bool) -> bool
+      def snapshot: () -> Configuration
+    end
+
+    class BudgetDecision < ::Struct
+      attr_accessor allowed: bool
+      attr_accessor limit: Integer?
+      attr_accessor used: Integer
+      attr_accessor remaining: Integer | Float
+      def allowed?: () -> bool
     end
 
     class RetryBudget
@@ -52,8 +104,10 @@ module RSpec
 
       def initialize: (untyped) -> void
       def consume!: () -> bool
+      def consume: () -> BudgetDecision
       def remaining: () -> Integer | Float
       def unlimited?: () -> bool
+      def reset!: () -> void
     end
 
     class FlakyReporter
@@ -65,25 +119,48 @@ module RSpec
       end
 
       class JsonlReporter
+        attr_reader path: String
         def initialize: (String path) -> void
         def record: (Event event) -> void
+        def flush: () -> void
+        def close: () -> void
       end
     end
 
-    class Event < ::Struct
-      attr_accessor schema_version: Integer
-      attr_accessor status: Symbol
-      attr_accessor retry_reason: Symbol?
-      attr_accessor example_id: String
-      attr_accessor description: String
-      attr_accessor location: String
-      attr_accessor attempt: Integer
-      attr_accessor retries: Integer
-      attr_accessor exception_class: String?
-      attr_accessor exception_message: String?
-      attr_accessor duration: Numeric
-      attr_accessor sleep_seconds: Numeric
-      attr_accessor timestamp: String
+    class Event
+      attr_reader schema_version: Integer
+      attr_reader status: Symbol
+      attr_reader retry_reason: Symbol?
+      attr_reader decision_reason: Symbol?
+      attr_reader example_id: String
+      attr_reader description: String
+      attr_reader location: String
+      attr_reader attempt: Integer
+      attr_reader retries: Integer
+      attr_reader max_attempts: Integer?
+      attr_reader exception_class: String?
+      attr_reader exception_message: String?
+      attr_reader exception_backtrace_top: String?
+      attr_reader failure_fingerprint: String?
+      attr_reader duration: Numeric
+      attr_reader total_duration: Numeric?
+      attr_reader attempt_durations: Array[Numeric]?
+      attr_reader first_failure_duration: Numeric?
+      attr_reader sleep_seconds: Numeric
+      attr_reader scheduled_sleep_seconds: Numeric?
+      attr_reader actual_sleep_seconds: Numeric?
+      attr_reader sleep_total: Numeric?
+      attr_reader timestamp: String
+      attr_reader budget_limit: Integer?
+      attr_reader budget_used: Integer?
+      attr_reader budget_remaining: Integer | Float | nil
+      attr_reader matched_retry_on: String?
+      attr_reader matched_skip_retry_on: String?
+      attr_reader matcher_error: String?
+      attr_reader metadata: Hash[Symbol, untyped]?
+
+      def initialize: (**untyped) -> void
+      def to_h: () -> Hash[Symbol, untyped]
     end
 
     class ExampleContext
@@ -97,35 +174,104 @@ module RSpec
       def run_with_rewind: (?Hash[Symbol | String, untyped]) -> void
     end
 
+    class RetryDecisionResult < ::Struct
+      attr_accessor allowed: bool
+      attr_accessor reason: Symbol
+      attr_accessor matched_retry_on: String?
+      attr_accessor matched_skip_retry_on: String?
+      attr_accessor matcher_error: String?
+      def allowed?: () -> bool
+    end
+
+    class RetryContext < ::Struct
+      attr_accessor attempt: Integer?
+      attr_accessor retries: Integer?
+      attr_accessor metadata: Hash[Symbol, untyped]?
+      attr_accessor budget_remaining: Integer | Float | nil
+      attr_accessor failure_fingerprint: String?
+    end
+
     class RetryDecision
-      def initialize: (exception: Exception?, example: untyped, retry_on: untyped, skip_retry_on: untyped, retry_if: untyped?) -> void
+      def initialize: (
+        exception: Exception?,
+        example: untyped,
+        retry_on: untyped,
+        skip_retry_on: untyped,
+        retry_if: untyped?,
+        ?retry_on_default: Symbol,
+        ?context: RetryContext?,
+        ?strict_callable_arity: bool
+      ) -> void
       def retry?: () -> bool
+      def decision: () -> RetryDecisionResult
     end
 
     class RetryPolicy
       def initialize: (example: untyped, configuration: Configuration, metadata: Hash[Symbol, untyped]?) -> void
       def retry_allowed?: (exception: Exception, retry_on: untyped, skip_retry_on: untyped, retry_if: untyped?) -> bool
+      def decision: (
+        exception: Exception,
+        retry_on: untyped,
+        skip_retry_on: untyped,
+        retry_if: untyped?,
+        ?retry_number: Integer?,
+        ?resolved_retries: Integer?,
+        ?budget_remaining: Integer | Float | nil
+      ) -> RetryDecisionResult
     end
 
     class RetryCountResolver
       ENV_RETRIES_KEY: String
+      ENV_DISABLE_KEY: String
 
       def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?) -> void
       def resolve: (explicit_retries: untyped) -> Integer
     end
 
     class RetryDelayResolver
+      class DelayContext < ::Struct
+        attr_accessor retry_number: Integer
+        attr_accessor resolved_retries: Integer?
+        attr_accessor metadata: Hash[Symbol, untyped]?
+        attr_accessor previous_sleep_seconds: Numeric
+        attr_accessor failure_fingerprint: String?
+      end
+
       def initialize: (configuration: Configuration, metadata: Hash[Symbol, untyped]?, example: untyped) -> void
-      def resolve: (retry_number: Integer, backoff: untyped, wait: untyped, exception: Exception) -> Float
+      def resolve: (
+        retry_number: Integer,
+        backoff: untyped,
+        wait: untyped,
+        exception: Exception,
+        ?resolved_retries: Integer?,
+        ?previous_sleep_seconds: Numeric,
+        ?failure_fingerprint: String?
+      ) -> Float
     end
 
     class AttemptRunner
+      def initialize: (?clock: untyped?) -> void
       def run: (run_target: untyped, exception_source: untyped) -> [Exception?, Float, bool]
     end
 
     class FlakyTransition
       def initialize: (event_builder: untyped, notifier: untyped) -> void
-      def perform: (attempt: Integer, retries: Integer, duration: Numeric) -> void
+      def perform: (
+        attempt: Integer,
+        retries: Integer,
+        duration: Numeric,
+        exception: Exception?,
+        ?total_duration: Numeric?,
+        ?attempt_durations: Array[Numeric]?,
+        ?first_failure_duration: Numeric?,
+        ?sleep_total: Numeric,
+        ?budget_decision: BudgetDecision?
+      ) -> void
+    end
+
+    class SleepMeasurement < ::Struct
+      attr_accessor scheduled: Numeric
+      attr_accessor actual: Numeric
     end
 
     class RetryTransition
@@ -144,8 +290,32 @@ module RSpec
         exception: Exception,
         backoff: untyped,
         wait: untyped,
-        example_source: untyped
+        example_source: untyped,
+        ?total_duration: Numeric?,
+        ?attempt_durations: Array[Numeric]?,
+        ?sleep_total: Numeric,
+        ?failure_fingerprint: String?,
+        ?budget_decision: BudgetDecision?,
+        ?policy_decision: RetryDecisionResult?
+      ) -> SleepMeasurement
+      def publish_not_retried: (
+        retry_number: Integer,
+        resolved_retries: Integer,
+        duration: Numeric,
+        exception: Exception,
+        decision: RetryGateDecision,
+        ?total_duration: Numeric?,
+        ?attempt_durations: Array[Numeric]?,
+        ?sleep_total: Numeric
       ) -> void
+    end
+
+    class RetryGateDecision < ::Struct
+      attr_accessor allowed: bool
+      attr_accessor reason: Symbol
+      attr_accessor policy_decision: RetryDecisionResult?
+      attr_accessor budget_decision: BudgetDecision?
+      def allowed?: () -> bool
     end
 
     class RetryGate
@@ -157,8 +327,27 @@ module RSpec
         retry_on: untyped,
         skip_retry_on: untyped,
         retry_if: untyped?,
-        example_id: String
+        example_id: String,
+        ?elapsed_time: Numeric?,
+        ?sleep_total: Numeric?
       ) -> bool
+      def decision: (
+        exception: Exception,
+        retry_number: Integer,
+        resolved_retries: Integer,
+        retry_on: untyped,
+        skip_retry_on: untyped,
+        retry_if: untyped?,
+        example_id: String,
+        ?elapsed_time: Numeric?,
+        ?sleep_total: Numeric?
+      ) -> RetryGateDecision
+    end
+
+    class RSpecAdapter
+      def clear_exception: (untyped) -> void
+      def clear_execution_result: (untyped) -> void
+      def clear_lets: (untyped) -> void
     end
 
     class RunnerLogger

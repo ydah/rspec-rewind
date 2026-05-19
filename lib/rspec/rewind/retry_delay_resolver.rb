@@ -9,20 +9,46 @@ module RSpec
         @example = example
       end
 
-      def resolve(retry_number:, backoff:, wait:, exception:)
+      DelayContext = Struct.new(
+        :retry_number,
+        :resolved_retries,
+        :metadata,
+        :previous_sleep_seconds,
+        :failure_fingerprint,
+        keyword_init: true
+      )
+
+      def resolve(
+        retry_number:,
+        backoff:,
+        wait:,
+        exception:,
+        resolved_retries: nil,
+        previous_sleep_seconds: 0.0,
+        failure_fingerprint: nil
+      )
         explicit_wait = first_non_nil(wait, @metadata[:rewind_wait])
         return normalize_delay(explicit_wait) if explicit_wait
 
         strategy = first_non_nil(backoff, @metadata[:rewind_backoff], @configuration.backoff)
         return normalize_delay(strategy) if strategy.is_a?(Numeric)
 
-        return 0.0 unless strategy.respond_to?(:call)
+        raise ArgumentError, 'backoff must be a non-negative numeric value or callable' unless strategy.respond_to?(:call)
 
-        raw = strategy.call(
+        args = {
           retry_number: retry_number,
           example: @example,
           exception: exception
-        )
+        }
+        args[:context] = DelayContext.new(
+          retry_number: retry_number,
+          resolved_retries: resolved_retries,
+          metadata: @metadata,
+          previous_sleep_seconds: previous_sleep_seconds,
+          failure_fingerprint: failure_fingerprint
+        ) if accepts_keyword?(strategy, :context)
+
+        raw = strategy.call(**args)
 
         normalize_delay(raw)
       end
@@ -43,6 +69,13 @@ module RSpec
 
       def first_non_nil(*values)
         values.find { |value| !value.nil? }
+      end
+
+      def accepts_keyword?(callable, keyword)
+        parameters = callable.respond_to?(:parameters) ? callable.parameters : callable.method(:call).parameters
+        parameters.any? do |type, name|
+          type == :keyrest || ((type == :key || type == :keyreq) && name == keyword)
+        end
       end
     end
   end

@@ -110,4 +110,94 @@ RSpec.describe RSpec::Rewind do
       expect(stdout).to include('1 example, 0 failures')
     end
   end
+
+  it 'does not auto-install when requiring core entrypoint' do
+    source = <<~RUBY
+      # frozen_string_literal: true
+
+      $LOAD_PATH.unshift(#{lib_path.inspect})
+      require "rspec/rewind/core"
+
+      RSpec::Rewind.reset_configuration!
+      RSpec::Rewind.configure { |config| config.default_retries = 1 }
+
+      attempts = 0
+
+      RSpec.describe "manual install" do
+        it "fails without installed hook" do
+          attempts += 1
+          raise "first attempt fails" if attempts == 1
+        end
+      end
+    RUBY
+
+    stdout, stderr, status = run_temp_rspec(source)
+
+    aggregate_failures do
+      expect(status.success?).to be(false), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('1 example, 1 failure')
+    end
+  end
+
+  it 'supports manual install from core entrypoint' do
+    source = <<~RUBY
+      # frozen_string_literal: true
+
+      $LOAD_PATH.unshift(#{lib_path.inspect})
+      require "rspec/rewind/core"
+
+      RSpec::Rewind.reset_configuration!
+      RSpec::Rewind.configure { |config| config.default_retries = 1 }
+      RSpec::Rewind.install!
+
+      attempts = 0
+
+      RSpec.describe "manual install" do
+        it "passes after manual install" do
+          attempts += 1
+          raise "first attempt fails" if attempts == 1
+        end
+      end
+    RUBY
+
+    stdout, stderr, status = run_temp_rspec(source)
+
+    aggregate_failures do
+      expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('1 example, 0 failures')
+    end
+  end
+
+  it 'retries inherited metadata in shared examples' do
+    source = <<~RUBY
+      # frozen_string_literal: true
+
+      $LOAD_PATH.unshift(#{lib_path.inspect})
+      require "rspec/rewind"
+
+      RSpec::Rewind.reset_configuration!
+
+      attempts = 0
+
+      RSpec.shared_examples "eventually stable" do
+        it "passes on retry" do
+          attempts += 1
+          raise "first attempt fails" if attempts == 1
+        end
+      end
+
+      RSpec.describe "nested metadata", rewind: 1 do
+        context "shared" do
+          include_examples "eventually stable"
+        end
+      end
+    RUBY
+
+    stdout, stderr, status = run_temp_rspec(source)
+
+    aggregate_failures do
+      expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('1 example, 0 failures')
+    end
+  end
 end

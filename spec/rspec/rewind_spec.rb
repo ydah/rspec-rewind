@@ -33,6 +33,13 @@ RSpec.describe RSpec::Rewind do
     end
   end
 
+  describe '.installed?' do
+    it 'reports installed hook state' do
+      expect(described_class.installed?).to be(true)
+      expect(described_class.install!).to be(false)
+    end
+  end
+
   it 'executes rewind-enabled examples through installed hook', rewind: 0 do
     expect(described_class.configuration).to be_a(RSpec::Rewind::Configuration)
   end

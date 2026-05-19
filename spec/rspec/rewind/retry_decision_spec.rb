@@ -120,4 +120,77 @@ RSpec.describe RSpec::Rewind::RetryDecision do
 
     expect(decision.retry?).to be(false)
   end
+
+  it 'exposes rejection reason and matcher error' do
+    matcher = ->(_exception) { raise 'bad matcher' }
+    result = build_decision(exception: RuntimeError.new('boom'), retry_on: [matcher]).decision
+
+    expect(result).to have_attributes(
+      allowed?: false,
+      reason: :retry_on_not_matched,
+      matcher_error: include('RuntimeError: bad matcher')
+    )
+  end
+
+  it 'records matched matcher descriptions' do
+    matcher = Class.new do
+      def description
+        'temporary gateway'
+      end
+
+      def call(exception)
+        exception.message.include?('temporary')
+      end
+    end.new
+
+    result = build_decision(retry_on: [matcher]).decision
+
+    expect(result.matched_retry_on).to eq('temporary gateway')
+  end
+
+  it 'can reject by retry_on default policy' do
+    result = build_decision(retry_on_default: :none).decision
+
+    expect(result).to have_attributes(allowed?: false, reason: :retry_on_default_rejected)
+  end
+
+  it 'passes retry context to three-argument predicates' do
+    context = RSpec::Rewind::RetryContext.new(attempt: 2, retries: 3)
+    decision = build_decision(
+      retry_if: ->(_exception, _example, retry_context) { retry_context.attempt == 2 },
+      context: context
+    )
+
+    expect(decision.retry?).to be(true)
+  end
+
+  it 'can raise on unsupported callable arity in strict mode' do
+    decision = build_decision(
+      retry_if: ->(_exception, _example, _context, _extra) { true },
+      strict_callable_arity: true
+    )
+
+    expect { decision.retry? }.to raise_error(ArgumentError, /maximum supported/)
+  end
+
+  def build_decision(
+    exception: RuntimeError.new('temporary'),
+    retry_on: [],
+    skip_retry_on: [],
+    retry_if: nil,
+    retry_on_default: :all,
+    context: nil,
+    strict_callable_arity: false
+  )
+    described_class.new(
+      exception: exception,
+      example: example,
+      retry_on: retry_on,
+      skip_retry_on: skip_retry_on,
+      retry_if: retry_if,
+      retry_on_default: retry_on_default,
+      context: context,
+      strict_callable_arity: strict_callable_arity
+    )
+  end
 end

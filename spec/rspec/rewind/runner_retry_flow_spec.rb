@@ -41,6 +41,40 @@ RSpec.describe RSpec::Rewind::Runner do
     expect(example.run_calls).to eq(2)
   end
 
+  it 'can dry-run retry decisions without running another attempt' do
+    events = []
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: 2 },
+      configure: lambda do |config|
+        config.dry_run = true
+        config.not_retried_callback = ->(event) { events << event }
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(1)
+    expect(events.first.decision_reason).to eq(:dry_run)
+  end
+
+  it 'stops when max elapsed time is exceeded' do
+    events = []
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('a'), nil],
+      metadata: { rewind: 2 },
+      configure: lambda do |config|
+        config.max_elapsed_time = 0.0
+        config.not_retried_callback = ->(event) { events << event }
+      end
+    )
+
+    runner.run
+
+    expect(example.run_calls).to eq(1)
+    expect(events.first.decision_reason).to eq(:max_elapsed_time_exceeded)
+  end
+
   it 'sleeps between retries when a backoff strategy is given' do
     allow(Kernel).to receive(:sleep)
 

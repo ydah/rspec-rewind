@@ -72,6 +72,60 @@ RSpec.describe RSpec::Rewind::RetryPolicy do
     expect(allowed).to be(true)
   end
 
+  it 'can AND-combine configuration, metadata, and explicit retry_if predicates' do
+    policy = build_policy(
+      metadata: { rewind_if: ->(_exception, _example) { true } },
+      configure: lambda do |config|
+        config.retry_if_mode = :and
+        config.retry_if = ->(_exception, _example) { true }
+      end
+    )
+
+    allowed = policy.retry_allowed?(
+      exception: RuntimeError.new('boom'),
+      retry_on: [RuntimeError],
+      skip_retry_on: nil,
+      retry_if: ->(_exception, _example) { false }
+    )
+
+    expect(allowed).to be(false)
+  end
+
+  it 'can OR-combine retry_if predicates' do
+    policy = build_policy(
+      metadata: { rewind_if: ->(_exception, _example) { false } },
+      configure: lambda do |config|
+        config.retry_if_mode = :or
+        config.retry_if = ->(_exception, _example) { false }
+      end
+    )
+
+    allowed = policy.retry_allowed?(
+      exception: RuntimeError.new('boom'),
+      retry_on: [RuntimeError],
+      skip_retry_on: nil,
+      retry_if: ->(_exception, _example) { true }
+    )
+
+    expect(allowed).to be(true)
+  end
+
+  it 'can override configured retry_on matchers from metadata' do
+    policy = build_policy(
+      metadata: { rewind_retry_on_mode: :override, rewind_retry_on: [IOError] },
+      configure: ->(config) { config.retry_on = [RuntimeError] }
+    )
+
+    allowed = policy.retry_allowed?(
+      exception: RuntimeError.new('boom'),
+      retry_on: nil,
+      skip_retry_on: nil,
+      retry_if: nil
+    )
+
+    expect(allowed).to be(false)
+  end
+
   it 'raises when explicit retry_on contains unsupported matcher types' do
     policy = build_policy
 

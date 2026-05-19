@@ -10,16 +10,33 @@ RSpec.describe RSpec::Rewind::FlakyTransition do
     event = instance_double(RSpec::Rewind::Event)
     allow(builder).to receive(:build).and_return(event)
 
-    transition.perform(attempt: 2, retries: 3, duration: 0.2)
-
-    expect(builder).to have_received(:build).with(
-      status: :flaky,
-      retry_reason: nil,
+    exception = RuntimeError.new('first failure')
+    transition.perform(
       attempt: 2,
       retries: 3,
       duration: 0.2,
+      exception: exception,
+      total_duration: 0.4,
+      attempt_durations: [0.2, 0.2],
+      first_failure_duration: 0.2,
+      sleep_total: 0.0
+    )
+
+    expect(builder).to have_received(:build).with(
+      status: :flaky,
+      retry_reason: :exception,
+      attempt: 2,
+      retries: 3,
+      duration: 0.2,
+      total_duration: 0.4,
+      attempt_durations: [0.2, 0.2],
+      first_failure_duration: 0.2,
       sleep_seconds: 0.0,
-      exception: nil
+      scheduled_sleep_seconds: 0.0,
+      actual_sleep_seconds: 0.0,
+      sleep_total: 0.0,
+      budget_decision: nil,
+      exception: exception
     )
     expect(notifier).to have_received(:publish_flaky).with(event)
   end

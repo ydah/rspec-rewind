@@ -11,6 +11,10 @@ module RSpec
         SecurityError
       ].freeze
 
+      def initialize(clock: nil)
+        @clock = clock || -> { Process.clock_gettime(Process::CLOCK_MONOTONIC) }
+      end
+
       def run(run_target:, exception_source:)
         started_at = monotonic_time
 
@@ -29,7 +33,7 @@ module RSpec
       private
 
       def monotonic_time
-        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+        @clock.call
       end
 
       def current_exception(exception_source)

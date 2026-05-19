@@ -27,45 +27,94 @@ module RSpec
 
         total_attempts = resolved_retries + 1
         attempt = 1
+        first_exception = nil
+        first_failure_duration = nil
+        attempt_durations = []
+        sleep_total = 0.0
+        started_at = monotonic_time
 
         while attempt <= total_attempts
           exception, duration, raised = @attempt_runner.run(
             run_target: @example,
             exception_source: @context.source
           )
+          attempt_durations << duration
 
           if exception.nil?
-            @flaky_transition.perform(attempt: attempt, retries: resolved_retries, duration: duration) if attempt > 1
+            if attempt > 1
+              @flaky_transition.perform(
+                attempt: attempt,
+                retries: resolved_retries,
+                duration: duration,
+                exception: first_exception,
+                total_duration: monotonic_time - started_at,
+                attempt_durations: attempt_durations.dup,
+                first_failure_duration: first_failure_duration,
+                sleep_total: sleep_total
+              )
+            end
             return
           end
 
+          first_exception ||= exception
+          first_failure_duration ||= duration
           retry_number = attempt
-          unless @retry_gate.allow?(
+          decision = @retry_gate.decision(
             exception: exception,
             retry_number: retry_number,
             resolved_retries: resolved_retries,
             retry_on: retry_on,
             skip_retry_on: skip_retry_on,
             retry_if: retry_if,
-            example_id: @context.id
+            example_id: @context.id,
+            elapsed_time: monotonic_time - started_at,
+            sleep_total: sleep_total
           )
+          unless decision.allowed?
+            @retry_transition.publish_not_retried(
+              retry_number: retry_number,
+              resolved_retries: resolved_retries,
+              duration: duration,
+              exception: exception,
+              decision: decision,
+              total_duration: monotonic_time - started_at,
+              attempt_durations: attempt_durations.dup,
+              sleep_total: sleep_total
+            )
             raise exception if raised
 
             return
           end
 
-          @retry_transition.perform(
+          sleep_measurement = @retry_transition.perform(
             retry_number: retry_number,
             resolved_retries: resolved_retries,
             duration: duration,
             exception: exception,
             backoff: backoff,
             wait: wait,
-            example_source: @context.source
+            example_source: @context.source,
+            total_duration: monotonic_time - started_at,
+            attempt_durations: attempt_durations.dup,
+            sleep_total: sleep_total,
+            failure_fingerprint: failure_fingerprint(exception),
+            budget_decision: decision.budget_decision,
+            policy_decision: decision.policy_decision
           )
+          sleep_total += sleep_measurement.actual
 
           attempt += 1
         end
+      end
+
+      private
+
+      def monotonic_time
+        Process.clock_gettime(Process::CLOCK_MONOTONIC)
+      end
+
+      def failure_fingerprint(exception)
+        [exception.class.name, exception.message, exception.backtrace&.first].join(':')
       end
     end
   end

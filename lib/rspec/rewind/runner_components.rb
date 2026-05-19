@@ -11,7 +11,10 @@ module RSpec
                   :retry_loop
 
       def initialize(example:, configuration:, context:, logger:)
-        event_builder = RetryEventBuilder.new(example_source: context.source)
+        event_builder = RetryEventBuilder.new(
+          example_source: context.source,
+          metadata_keys: configuration.metadata_report_keys
+        )
         notifier = RetryNotifier.new(
           configuration: configuration,
           debug: logger.method(:debug),
@@ -33,7 +36,7 @@ module RSpec
           configuration: configuration,
           metadata: context.metadata
         )
-        @attempt_runner = AttemptRunner.new
+        @attempt_runner = AttemptRunner.new(clock: configuration.clock)
         @retry_gate = RetryGate.new(
           configuration: configuration,
           retry_policy: retry_policy,
@@ -45,7 +48,7 @@ module RSpec
           event_builder: event_builder,
           notifier: notifier,
           state_resetter: state_resetter,
-          sleep: Kernel.method(:sleep)
+          sleep: configuration.sleeper
         )
         @flaky_transition = FlakyTransition.new(
           event_builder: event_builder,

@@ -54,6 +54,25 @@ RSpec.describe RSpec::Rewind::Backoff do
       expect(delay).to be_between(1.6, 2.4)
     end
 
+    it 'uses injected rng for deterministic jitter' do
+      rng = Random.new(1234)
+      strategy = described_class.exponential(base: 1.0, jitter: 0.2, rng: rng)
+
+      expect(strategy.call(retry_number: 2)).to be_within(0.0001).of(1.7532)
+    end
+
+    it 'keeps max as the final cap after jitter' do
+      strategy = described_class.exponential(base: 1.0, max: 1.0, jitter: 1.0, rng: -> { 1.0 })
+
+      expect(strategy.call(retry_number: 3)).to eq(1.0)
+    end
+
+    it 'can enforce a minimum exponential factor' do
+      expect do
+        described_class.exponential(base: 0.1, factor: 0.5, min_factor: 1.0)
+      end.to raise_error(ArgumentError, /factor must be >= 1.0/)
+    end
+
     it 'raises when jitter is negative' do
       expect do
         described_class.exponential(base: 0.1, jitter: -0.2)

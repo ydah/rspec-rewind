@@ -20,6 +20,42 @@ RSpec.describe RSpec::Rewind::RetryCountResolver do
     ENV['RSPEC_REWIND_RETRIES'] = original
   end
 
+  it 'treats empty environment retries as unset' do
+    original = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
+    ENV['RSPEC_REWIND_RETRIES'] = ''
+
+    resolver = build_resolver(configure: ->(config) { config.default_retries = 2 })
+
+    expect(resolver.resolve(explicit_retries: nil)).to eq(2)
+  ensure
+    ENV['RSPEC_REWIND_RETRIES'] = original
+  end
+
+  it 'supports an environment hard disable' do
+    original_disable = ENV.fetch('RSPEC_REWIND_DISABLE', nil)
+    original_retries = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
+    ENV['RSPEC_REWIND_DISABLE'] = '1'
+    ENV['RSPEC_REWIND_RETRIES'] = '3'
+
+    resolver = build_resolver(configure: ->(config) { config.default_retries = 2 })
+
+    expect(resolver.resolve(explicit_retries: nil)).to eq(0)
+  ensure
+    ENV['RSPEC_REWIND_DISABLE'] = original_disable
+    ENV['RSPEC_REWIND_RETRIES'] = original_retries
+  end
+
+  it 'treats explicit false as a hard opt-out even with environment retries' do
+    original = ENV.fetch('RSPEC_REWIND_RETRIES', nil)
+    ENV['RSPEC_REWIND_RETRIES'] = '3'
+
+    resolver = build_resolver
+
+    expect(resolver.resolve(explicit_retries: false)).to eq(0)
+  ensure
+    ENV['RSPEC_REWIND_RETRIES'] = original
+  end
+
   it 'treats false as zero and true as no override' do
     resolver = build_resolver(metadata: { rewind: true }, configure: ->(config) { config.default_retries = 2 })
 
@@ -44,5 +80,13 @@ RSpec.describe RSpec::Rewind::RetryCountResolver do
     end.to raise_error(ArgumentError, /RSPEC_REWIND_RETRIES must be a non-negative integer/)
   ensure
     ENV['RSPEC_REWIND_RETRIES'] = original
+  end
+
+  it 'raises when resolved retries exceed max_retries' do
+    resolver = build_resolver(configure: ->(config) { config.max_retries = 1 })
+
+    expect do
+      resolver.resolve(explicit_retries: 2)
+    end.to raise_error(ArgumentError, /retries must be <= 1/)
   end
 end

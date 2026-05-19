@@ -44,6 +44,17 @@ RSpec.describe RSpec::Rewind::AttemptRunner do
     expect(exception).to be_nil
   end
 
+  it 'can measure duration with an injected clock' do
+    ticks = [10.0, 10.25]
+    runner = described_class.new(clock: -> { ticks.shift })
+    run_target = Object.new
+    def run_target.run; end
+
+    _exception, duration = runner.run(run_target: run_target, exception_source: Object.new)
+
+    expect(duration).to eq(0.25)
+  end
+
   it 're-raises fatal exceptions' do
     run_target = Object.new
     run_target.define_singleton_method(:run) { raise SystemExit, 1 }

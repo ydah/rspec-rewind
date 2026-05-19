@@ -55,4 +55,17 @@ RSpec.describe RSpec::Rewind::Runner do
 
     expect(legacy_group.instance_variable_get(:@__memoized)).to be_nil
   end
+
+  it 'can continue when state reset fails and policy allows it' do
+    runner, example, = build_runner(
+      outcomes: [RuntimeError.new('boom'), nil],
+      metadata: { rewind: 1 },
+      configure: ->(config) { config.reset_failure_policy = :continue }
+    )
+
+    example.define_singleton_method(:clear_exception) { raise 'reset failed' }
+
+    expect { runner.run }.not_to raise_error
+    expect(example.run_calls).to eq(2)
+  end
 end

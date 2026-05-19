@@ -20,11 +20,13 @@ module RSpec
         end
       end
 
-      def exponential(base:, factor: 2.0, max: nil, jitter: 0.0)
+      def exponential(base:, factor: 2.0, max: nil, jitter: 0.0, rng: Kernel, min_factor: 0.0)
         base_value = normalize_numeric(base, 'base')
         factor_value = normalize_numeric(factor, 'factor')
+        min_factor_value = normalize_numeric(min_factor, 'min_factor')
         jitter_value = normalize_numeric(jitter, 'jitter')
         max_value = max.nil? ? nil : normalize_numeric(max, 'max')
+        raise ArgumentError, "factor must be >= #{min_factor_value}" if factor_value < min_factor_value
 
         lambda do |retry_number:, **_|
           exponent = [retry_number.to_i - 1, 0].max
@@ -36,7 +38,7 @@ module RSpec
           spread = delay * jitter_value
           min_delay = [delay - spread, 0.0].max
           max_delay = delay + spread
-          (Kernel.rand * (max_delay - min_delay)) + min_delay
+          clamp((random_value(rng) * (max_delay - min_delay)) + min_delay, max_value)
         end
       end
 
@@ -59,6 +61,17 @@ module RSpec
         number
       end
       private_class_method :normalize_numeric
+
+      def random_value(rng)
+        if rng.respond_to?(:rand)
+          rng.rand
+        elsif rng.respond_to?(:call)
+          rng.call
+        else
+          raise ArgumentError, 'rng must respond to #rand or #call'
+        end
+      end
+      private_class_method :random_value
     end
   end
 end

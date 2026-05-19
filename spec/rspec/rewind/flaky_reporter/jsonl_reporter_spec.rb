@@ -34,7 +34,8 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
         'status' => 'flaky',
         'retry_reason' => nil,
         'attempt' => 2,
-        'description' => 'sometimes fails'
+        'description' => 'sometimes fails',
+        'max_attempts' => nil
       )
     end
   end
@@ -43,6 +44,24 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
     with_tmp_report_path('nested', 'flaky.jsonl') do |path|
       described_class.new(path).record(event)
       expect(File).to exist(path)
+    end
+  end
+
+  it 'appends safely from multiple processes' do
+    skip 'fork is not available on this platform' unless Process.respond_to?(:fork)
+
+    with_tmp_report_path('parallel.jsonl') do |path|
+      pids = 3.times.map do
+        fork do
+          described_class.new(path).record(event)
+        end
+      end
+      pids.each { |pid| Process.wait(pid) }
+
+      lines = File.readlines(path)
+
+      expect(lines.size).to eq(3)
+      expect(lines.map { |line| JSON.parse(line).fetch('status') }).to all(eq('flaky'))
     end
   end
 

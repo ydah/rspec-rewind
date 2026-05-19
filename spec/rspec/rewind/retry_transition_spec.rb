@@ -12,8 +12,11 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     )
 
     expect_resolve_called(context)
-    expect_event_built(context, sleep_seconds: 0.5)
+    expect_scheduled_event_built(context, sleep_seconds: 0.5)
+    expect_final_event_built(context, sleep_seconds: 0.5)
+    expect(context[:notifier]).to have_received(:notify_before_retry).with(context[:event])
     expect(context[:notifier]).to have_received(:notify_retry).with(context[:event])
+    expect(context[:notifier]).to have_received(:notify_after_retry).with(context[:event])
     expect(context[:notifier]).to have_received(:show_failure_message).with(params[:exception])
     expect(context[:resetter]).to have_received(:reset).with(params[:example_source])
     expect(context[:sleep_calls]).to eq([0.5])
@@ -28,6 +31,7 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     )
 
     expect(context[:notifier]).to have_received(:notify_retry).with(context[:event])
+    expect(context[:notifier]).to have_received(:notify_after_retry).with(context[:event])
     expect(context[:notifier]).not_to have_received(:show_failure_message)
     expect(context[:resetter]).to have_received(:reset).with(params[:example_source])
     expect(context[:sleep_calls]).to be_empty
@@ -72,11 +76,14 @@ RSpec.describe RSpec::Rewind::RetryTransition do
       retry_number: params[:retry_number],
       backoff: params[:backoff],
       wait: params[:wait],
-      exception: params[:exception]
+      exception: params[:exception],
+      resolved_retries: params[:resolved_retries],
+      previous_sleep_seconds: 0.0,
+      failure_fingerprint: nil
     )
   end
 
-  def expect_event_built(context, sleep_seconds:)
+  def expect_scheduled_event_built(context, sleep_seconds:)
     params = context[:retry_params]
     expect(context[:builder]).to have_received(:build).with(
       status: :retrying,
@@ -84,7 +91,38 @@ RSpec.describe RSpec::Rewind::RetryTransition do
       attempt: params[:retry_number],
       retries: params[:resolved_retries],
       duration: params[:duration],
+      total_duration: nil,
+      attempt_durations: nil,
       sleep_seconds: sleep_seconds,
+      scheduled_sleep_seconds: sleep_seconds,
+      actual_sleep_seconds: nil,
+      sleep_total: 0.0,
+      budget_decision: nil,
+      matched_retry_on: nil,
+      matched_skip_retry_on: nil,
+      matcher_error: nil,
+      exception: params[:exception]
+    )
+  end
+
+  def expect_final_event_built(context, sleep_seconds:)
+    params = context[:retry_params]
+    expect(context[:builder]).to have_received(:build).with(
+      status: :retrying,
+      retry_reason: :exception,
+      attempt: params[:retry_number],
+      retries: params[:resolved_retries],
+      duration: params[:duration],
+      total_duration: nil,
+      attempt_durations: nil,
+      sleep_seconds: sleep_seconds,
+      scheduled_sleep_seconds: sleep_seconds,
+      actual_sleep_seconds: be_a(Float),
+      sleep_total: be_a(Float),
+      budget_decision: nil,
+      matched_retry_on: nil,
+      matched_skip_retry_on: nil,
+      matcher_error: nil,
       exception: params[:exception]
     )
   end

@@ -14,13 +14,29 @@ RSpec.describe RSpec::Rewind::Configuration do
         retry_if: nil,
         retry_callback: nil,
         flaky_callback: nil,
+        not_retried_callback: nil,
         verbose: false,
         display_retry_failure_messages: false,
-        clear_lets_on_failure: true
+        display_retry_backtrace_top: false,
+        clear_lets_on_failure: true,
+        reset_failure_policy: :raise,
+        retry_if_mode: :override,
+        retry_on_default: :all,
+        report_retry_events: false,
+        strict_callbacks: false,
+        strict_callable_arity: false,
+        strict_matcher_validation: false,
+        metadata_report_keys: [],
+        max_retries: nil,
+        max_elapsed_time: nil,
+        max_total_sleep: nil,
+        dry_run: false
       )
       expect(config.backoff).to respond_to(:call)
       expect(config.retry_budget).to be_a(RSpec::Rewind::RetryBudget)
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::NullReporter)
+      expect(config.sleeper).to respond_to(:call)
+      expect(config.clock).to respond_to(:call)
     end
   end
 
@@ -90,6 +106,10 @@ RSpec.describe RSpec::Rewind::Configuration do
       expect do
         config.flaky_callback = :callback
       end.to raise_error(ArgumentError, /flaky_callback must be nil or callable/)
+
+      expect do
+        config.not_retried_callback = :callback
+      end.to raise_error(ArgumentError, /not_retried_callback must be nil or callable/)
     end
 
     it 'accepts Module, Regexp, and callable retry matchers' do
@@ -109,6 +129,18 @@ RSpec.describe RSpec::Rewind::Configuration do
       expect do
         config.retry_on = [RuntimeError, :invalid]
       end.to raise_error(ArgumentError, /retry_on entries must be Module, Regexp, or callable/)
+    end
+
+    it 'can require Module matchers to be Exception classes' do
+      config = described_class.new
+      config.strict_matcher_validation = true
+
+      expect do
+        config.retry_on = [Enumerable]
+      end.to raise_error(ArgumentError, /Exception classes/)
+
+      config.retry_on = [RuntimeError]
+      expect(config.retry_on).to eq([RuntimeError])
     end
 
     it 'raises when skip_retry_on contains unsupported matcher types' do
@@ -134,6 +166,30 @@ RSpec.describe RSpec::Rewind::Configuration do
         config.clear_lets_on_failure = 1
       end.to raise_error(ArgumentError, /clear_lets_on_failure must be true or false/)
     end
+
+    it 'raises when enum settings are invalid' do
+      config = described_class.new
+
+      expect do
+        config.retry_if_mode = :xor
+      end.to raise_error(ArgumentError, /retry_if_mode must be one of/)
+
+      expect do
+        config.retry_on_default = :assertions
+      end.to raise_error(ArgumentError, /retry_on_default must be one of/)
+
+      expect do
+        config.reset_failure_policy = :ignore
+      end.to raise_error(ArgumentError, /reset_failure_policy must be one of/)
+    end
+
+    it 'raises when retry ceilings are invalid' do
+      config = described_class.new
+
+      expect { config.max_retries = -1 }.to raise_error(ArgumentError, /max_retries must be >= 0/)
+      expect { config.max_elapsed_time = -0.1 }.to raise_error(ArgumentError, /max_elapsed_time must be >= 0/)
+      expect { config.max_total_sleep = 'slow' }.to raise_error(ArgumentError, /max_total_sleep must be a numeric/)
+    end
   end
 
   describe 'flaky reporter configuration' do
@@ -142,9 +198,11 @@ RSpec.describe RSpec::Rewind::Configuration do
 
       config.flaky_report_path = 'tmp/flaky.jsonl'
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::JsonlReporter)
+      expect(config.flaky_report_path).to eq('tmp/flaky.jsonl')
 
       config.flaky_report_path = nil
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::NullReporter)
+      expect(config.flaky_report_path).to be_nil
     end
 
     it 'falls back to null reporter when flaky_reporter is nil' do
@@ -153,6 +211,14 @@ RSpec.describe RSpec::Rewind::Configuration do
       config.flaky_reporter = nil
 
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::NullReporter)
+    end
+
+    it 'rejects reporters without record' do
+      config = described_class.new
+
+      expect do
+        config.flaky_reporter = Object.new
+      end.to raise_error(ArgumentError, /flaky_reporter must respond to #record/)
     end
   end
 end

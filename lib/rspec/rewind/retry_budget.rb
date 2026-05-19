@@ -2,6 +2,18 @@
 
 module RSpec
   module Rewind
+    BudgetDecision = Struct.new(
+      :allowed,
+      :limit,
+      :used,
+      :remaining,
+      keyword_init: true
+    ) do
+      def allowed?
+        allowed
+      end
+    end
+
     class RetryBudget
       attr_reader :limit, :used
 
@@ -12,13 +24,17 @@ module RSpec
       end
 
       def consume!
-        return true if unlimited?
+        consume.allowed?
+      end
+
+      def consume
+        return decision(true) if unlimited?
 
         @mutex.synchronize do
-          return false if @used >= @limit
+          return decision(false) if @used >= @limit
 
           @used += 1
-          true
+          decision(true)
         end
       end
 
@@ -32,7 +48,20 @@ module RSpec
         @limit.nil?
       end
 
+      def reset!
+        @mutex.synchronize { @used = 0 }
+      end
+
       private
+
+      def decision(allowed)
+        BudgetDecision.new(
+          allowed: allowed,
+          limit: @limit,
+          used: @used,
+          remaining: remaining
+        )
+      end
 
       def normalize_limit(limit)
         return nil if limit.nil?

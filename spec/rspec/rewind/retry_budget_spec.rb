@@ -21,6 +21,23 @@ RSpec.describe RSpec::Rewind::RetryBudget do
     expect(budget.remaining).to eq(0)
   end
 
+  it 'returns budget decisions and can reset usage' do
+    budget = described_class.new(1)
+
+    decision = budget.consume
+
+    expect(decision).to have_attributes(
+      allowed?: true,
+      limit: 1,
+      used: 1,
+      remaining: 0
+    )
+
+    budget.reset!
+    expect(budget.used).to eq(0)
+    expect(budget.remaining).to eq(1)
+  end
+
   it 'raises on invalid limit' do
     expect do
       described_class.new('many')
