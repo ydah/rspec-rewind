@@ -172,11 +172,12 @@ module RSpec
         raise ArgumentError, 'flaky_reporter must respond to #record' unless normalized.respond_to?(:record)
 
         @flaky_reporter = normalized
+        @flaky_report_path = reporter_path(normalized)
       end
 
       def flaky_report_path=(path)
-        @flaky_report_path = path
-        @flaky_reporter = path.nil? ? FlakyReporter.null : FlakyReporter.jsonl(path)
+        @flaky_report_path = path&.to_s
+        @flaky_reporter = @flaky_report_path.nil? ? FlakyReporter.null : FlakyReporter.jsonl(@flaky_report_path)
       end
 
       def retry_if_mode=(mode)
@@ -250,6 +251,13 @@ module RSpec
         @retry_on.freeze
         @skip_retry_on.freeze
         @metadata_report_keys.freeze
+      end
+
+      def reporter_path(reporter)
+        return nil unless reporter.respond_to?(:path)
+
+        path = reporter.path
+        path&.to_s
       end
     end
   end

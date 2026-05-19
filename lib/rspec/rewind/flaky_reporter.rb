@@ -18,6 +18,10 @@ module RSpec
 
       class NullReporter
         def record(_event); end
+
+        def flush; end
+
+        def close; end
       end
 
       class JsonlReporter

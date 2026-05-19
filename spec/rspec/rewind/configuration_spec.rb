@@ -223,10 +223,25 @@ RSpec.describe RSpec::Rewind::Configuration do
 
     it 'falls back to null reporter when flaky_reporter is nil' do
       config = described_class.new
+      config.flaky_report_path = 'tmp/flaky.jsonl'
 
       config.flaky_reporter = nil
 
       expect(config.flaky_reporter).to be_a(RSpec::Rewind::FlakyReporter::NullReporter)
+      expect(config.flaky_report_path).to be_nil
+    end
+
+    it 'keeps flaky_report_path aligned with assigned reporters' do
+      config = described_class.new
+      reporter = RSpec::Rewind::FlakyReporter.jsonl('tmp/custom.jsonl')
+
+      config.flaky_reporter = reporter
+      expect(config.flaky_report_path).to eq('tmp/custom.jsonl')
+
+      config.flaky_reporter = Class.new do
+        def record(_event); end
+      end.new
+      expect(config.flaky_report_path).to be_nil
     end
 
     it 'rejects reporters without record' do

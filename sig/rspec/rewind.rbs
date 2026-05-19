@@ -166,6 +166,8 @@ module RSpec
 
       class NullReporter
         def record: (Event event) -> void
+        def flush: () -> void
+        def close: () -> void
       end
 
       class JsonlReporter

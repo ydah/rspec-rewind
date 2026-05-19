@@ -65,6 +65,13 @@ RSpec.describe RSpec::Rewind::FlakyReporter::JsonlReporter do
     end
   end
 
+  it 'shares reporter lifecycle methods with the null reporter' do
+    reporter = RSpec::Rewind::FlakyReporter.null
+
+    expect { reporter.flush }.not_to raise_error
+    expect { reporter.close }.not_to raise_error
+  end
+
   def with_tmp_report_path(*segments)
     Dir.mktmpdir do |dir|
       yield File.join(dir, *segments)
