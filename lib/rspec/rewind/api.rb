@@ -6,6 +6,7 @@ module RSpec
       Backoff,
       Configuration,
       Event,
+      FileRetryBudget,
       FlakyReporter,
       RetryBudget,
       RetryDecision,

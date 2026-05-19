@@ -38,6 +38,13 @@ RSpec.describe RSpec::Rewind do
       expect(described_class.installed?).to be(true)
       expect(described_class.install!).to be(false)
     end
+
+    it 'keeps installed hook state after configuration reset' do
+      described_class.reset_configuration!
+
+      expect(described_class.installed?).to be(true)
+      expect(described_class.configuration).to be_a(RSpec::Rewind::Configuration)
+    end
   end
 
   describe '.prepare_suite!' do

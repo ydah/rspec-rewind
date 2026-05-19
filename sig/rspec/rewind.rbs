@@ -146,6 +146,19 @@ module RSpec
       def reset!: () -> void
     end
 
+    class FileRetryBudget
+      attr_reader limit: Integer
+      attr_reader path: String
+
+      def initialize: (limit: untyped, path: String) -> void
+      def consume!: () -> bool
+      def consume: () -> BudgetDecision
+      def used: () -> Integer
+      def remaining: () -> Integer
+      def unlimited?: () -> bool
+      def reset!: () -> void
+    end
+
     class FlakyReporter
       def self.null: () -> NullReporter
       def self.jsonl: (String path) -> JsonlReporter

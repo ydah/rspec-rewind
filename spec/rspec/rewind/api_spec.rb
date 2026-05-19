@@ -8,6 +8,7 @@ RSpec.describe 'RSpec::Rewind API boundaries' do
       RSpec::Rewind::Backoff,
       RSpec::Rewind::Configuration,
       RSpec::Rewind::Event,
+      RSpec::Rewind::FileRetryBudget,
       RSpec::Rewind::Runner
     )
   end

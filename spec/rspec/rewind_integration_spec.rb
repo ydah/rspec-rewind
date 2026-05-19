@@ -8,7 +8,7 @@ require 'rbconfig'
 RSpec.describe RSpec::Rewind do
   let(:lib_path) { File.expand_path('../../../lib', __dir__) }
 
-  def run_temp_rspec(example_source, env: {})
+  def run_temp_rspec(example_source, env: {}, format: 'progress', extra_args: [])
     Dir.mktmpdir('rspec-rewind-integration') do |dir|
       spec_path = File.join(dir, 'integration_spec.rb')
       File.write(spec_path, example_source)
@@ -22,7 +22,8 @@ RSpec.describe RSpec::Rewind do
         File::NULL,
         spec_path,
         '--format',
-        'progress'
+        format,
+        *extra_args
       )
     end
   end
@@ -421,6 +422,67 @@ RSpec.describe RSpec::Rewind do
     aggregate_failures do
       expect(status.success?).to be(false), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
       expect("#{stdout}\n#{stderr}").to include('rspec-rewind observed 1 flaky example')
+    end
+  end
+
+  it 'works with random order enabled' do
+    source = <<~RUBY
+      # frozen_string_literal: true
+
+      $LOAD_PATH.unshift(#{lib_path.inspect})
+      require "rspec/rewind"
+
+      RSpec::Rewind.reset_configuration!
+
+      attempts = Hash.new(0)
+
+      RSpec.describe "random order" do
+        it "passes after retry", rewind: 1 do
+          attempts[:flaky] += 1
+          raise "first attempt fails" if attempts[:flaky] == 1
+        end
+
+        it "passes normally" do
+          attempts[:stable] += 1
+          expect(attempts[:stable]).to eq(1)
+        end
+      end
+    RUBY
+
+    stdout, stderr, status = run_temp_rspec(source, extra_args: ['--order', 'rand:1234'])
+
+    aggregate_failures do
+      expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('2 examples, 0 failures')
+    end
+  end
+
+  it 'preserves documentation formatter output while retrying' do
+    source = <<~RUBY
+      # frozen_string_literal: true
+
+      $LOAD_PATH.unshift(#{lib_path.inspect})
+      require "rspec/rewind"
+
+      RSpec::Rewind.reset_configuration!
+
+      attempts = 0
+
+      RSpec.describe "formatter integration", rewind: 1 do
+        it "eventually passes" do
+          attempts += 1
+          raise "first attempt fails" if attempts == 1
+        end
+      end
+    RUBY
+
+    stdout, stderr, status = run_temp_rspec(source, format: 'documentation')
+
+    aggregate_failures do
+      expect(status.success?).to be(true), "stdout:\n#{stdout}\nstderr:\n#{stderr}"
+      expect(stdout).to include('formatter integration')
+      expect(stdout).to include('eventually passes')
+      expect(stdout).to include('1 example, 0 failures')
     end
   end
 end
