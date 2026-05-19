@@ -88,10 +88,11 @@ module RSpec
 
       def close_reporter
         reporter = configuration.flaky_reporter
-        reporter.flush if reporter.respond_to?(:flush)
-        reporter.close if reporter.respond_to?(:close)
+        lifecycle_error = reporter_lifecycle_error(reporter)
+
         publish_retry_summary
         enforce_flaky_threshold!
+        raise lifecycle_error if lifecycle_error && configuration.strict_callbacks
       end
 
       def prepare_suite!
@@ -125,6 +126,22 @@ module RSpec
         return unless Gem.loaded_specs.key?('rspec-retry') || defined?(::RSpec::Retry)
 
         warn '[rspec-rewind] rspec-retry appears to be loaded; multiple retry hooks can interfere'
+      end
+
+      def reporter_lifecycle_error(reporter)
+        %i[flush close].filter_map do |method_name|
+          invoke_reporter_lifecycle(reporter, method_name)
+        end.first
+      end
+
+      def invoke_reporter_lifecycle(reporter, method_name)
+        return nil unless reporter.respond_to?(method_name)
+
+        reporter.public_send(method_name)
+        nil
+      rescue StandardError => e
+        warn "[rspec-rewind] flaky reporter #{method_name} failed: #{e.class}: #{e.message}"
+        e
       end
     end
   end

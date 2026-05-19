@@ -80,6 +80,35 @@ RSpec.describe RSpec::Rewind do
     end
   end
 
+  describe '.close_reporter' do
+    it 'continues suite-end checks when reporter lifecycle fails outside strict mode' do
+      reporter = lifecycle_reporter(flush_error: RuntimeError.new('flush failed'))
+      described_class.configuration.flaky_reporter = reporter
+      described_class.configuration.fail_on_flaky = true
+      described_class.configuration.retry_summary.record(RSpec::Rewind::Event.new(status: :flaky))
+      allow(described_class).to receive(:warn)
+
+      expect do
+        described_class.close_reporter
+      end.to raise_error(RSpec::Rewind::FlakyThresholdExceeded)
+      expect(reporter.close_calls).to eq(1)
+      expect(described_class).to have_received(:warn).with(include('flaky reporter flush failed'))
+    end
+
+    it 'raises reporter lifecycle errors when strict callbacks are enabled' do
+      reporter = lifecycle_reporter(close_error: RuntimeError.new('close failed'))
+      described_class.configuration.flaky_reporter = reporter
+      described_class.configuration.strict_callbacks = true
+      allow(described_class).to receive(:warn)
+
+      expect do
+        described_class.close_reporter
+      end.to raise_error(RuntimeError, /close failed/)
+      expect(reporter.flush_calls).to eq(1)
+      expect(reporter.close_calls).to eq(1)
+    end
+  end
+
   describe '.warn_on_retry_gem_conflict' do
     it 'warns when another retry integration is loaded' do
       stub_const('RSpec::Retry', Module.new)
@@ -93,5 +122,30 @@ RSpec.describe RSpec::Rewind do
 
   it 'executes rewind-enabled examples through installed hook', rewind: 0 do
     expect(described_class.configuration).to be_a(RSpec::Rewind::Configuration)
+  end
+
+  def lifecycle_reporter(flush_error: nil, close_error: nil)
+    Class.new do
+      attr_reader :flush_calls, :close_calls
+
+      define_method(:initialize) do
+        @flush_calls = 0
+        @close_calls = 0
+      end
+
+      define_method(:record) do |_event|
+        nil
+      end
+
+      define_method(:flush) do
+        @flush_calls += 1
+        raise flush_error if flush_error
+      end
+
+      define_method(:close) do
+        @close_calls += 1
+        raise close_error if close_error
+      end
+    end.new
   end
 end
