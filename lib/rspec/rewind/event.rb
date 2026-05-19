@@ -42,9 +42,7 @@ module RSpec
 
       def initialize(**attributes)
         FIELDS.each do |field|
-          value = attributes.fetch(field, nil)
-          value = value.dup.freeze if value.is_a?(Array) || value.is_a?(Hash)
-          instance_variable_set(:"@#{field}", value)
+          instance_variable_set(:"@#{field}", immutable_value(attributes.fetch(field, nil)))
         end
 
         freeze
@@ -53,6 +51,23 @@ module RSpec
       def to_h
         FIELDS.to_h do |field|
           [field, public_send(field)]
+        end
+      end
+
+      private
+
+      def immutable_value(value)
+        case value
+        when Array
+          value.map { |item| immutable_value(item) }.freeze
+        when Hash
+          value.each_with_object({}) do |(key, item), copy|
+            copy[immutable_value(key)] = immutable_value(item)
+          end.freeze
+        when String
+          value.dup.freeze
+        else
+          value
         end
       end
     end

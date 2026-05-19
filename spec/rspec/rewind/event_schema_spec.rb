@@ -34,4 +34,18 @@ RSpec.describe 'RSpec::Rewind event schema' do
 
     expect(event.to_h.keys).to eq(RSpec::Rewind::Event::FIELDS)
   end
+
+  it 'copies and freezes nested event data' do
+    metadata = { tags: ['js'], label: +'slow' }
+    event = RSpec::Rewind::Event.new(metadata: metadata, attempt_durations: [0.1])
+
+    metadata[:tags] << 'mutated'
+    metadata[:label].replace('fast')
+
+    expect(event.metadata).to eq(tags: ['js'], label: 'slow')
+    expect(event.metadata).to be_frozen
+    expect(event.metadata[:tags]).to be_frozen
+    expect(event.metadata[:label]).to be_frozen
+    expect(event.attempt_durations).to be_frozen
+  end
 end
