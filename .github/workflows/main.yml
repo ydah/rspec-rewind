@@ -31,6 +31,10 @@ jobs:
             experimental: true
           - ruby: "head"
             experimental: true
+          - ruby: "jruby"
+            experimental: true
+          - ruby: "truffleruby"
+            experimental: true
     continue-on-error: ${{ matrix.experimental }}
     steps:
       - uses: actions/checkout@v6
@@ -75,6 +79,23 @@ jobs:
           bundler-cache: true
       - name: Verify minimum supported RSpec
         run: bundle exec rspec
+  latest-rspec:
+    runs-on: ubuntu-latest
+    name: Latest RSpec 3.x
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: true
+      - name: Update RSpec within supported range
+        run: bundle update rspec rspec-core rspec-expectations rspec-mocks rspec-support
+      - name: Run specs
+        run: bundle exec rspec
   dependency-security:
     runs-on: ubuntu-latest
     name: Dependency Security
@@ -109,6 +130,8 @@ jobs:
           bundler-cache: true
       - name: Type signatures
         run: bundle exec rake rbs
+      - name: Syntax lint
+        run: bundle exec rake syntax
       - name: Coverage
         run: COVERAGE=1 bundle exec rspec
       - name: Build gem
