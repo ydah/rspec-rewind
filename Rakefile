@@ -4,12 +4,14 @@ require 'bundler/gem_tasks'
 require 'rbconfig'
 require 'rspec/core/rake_task'
 require 'tmpdir'
+
+RUBY_FILES = FileList['lib/**/*.rb', 'spec/**/*.rb', '*.gemspec', 'Rakefile']
+
 RSpec::Core::RakeTask.new(:spec)
 
 desc 'Syntax check Ruby source and specs'
 task :syntax do
-  files = FileList['lib/**/*.rb', 'spec/**/*.rb', '*.gemspec', 'Rakefile']
-  files.each { |file| sh RbConfig.ruby, '-c', file }
+  RUBY_FILES.each { |file| sh RbConfig.ruby, '-c', file }
 end
 
 desc 'Validate RBS signatures'
@@ -19,7 +21,7 @@ end
 
 desc 'Run RuboCop style lint'
 task :rubocop do
-  sh 'bundle exec rubocop'
+  sh 'bundle', 'exec', 'rubocop', *RUBY_FILES
 end
 
 desc 'Build, install, and require the packaged gem'
