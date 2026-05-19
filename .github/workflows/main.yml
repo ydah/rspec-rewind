@@ -132,6 +132,8 @@ jobs:
         run: bundle exec rake rbs
       - name: Syntax lint
         run: bundle exec rake syntax
+      - name: RuboCop lint
+        run: bundle exec rake rubocop
       - name: Coverage
         run: COVERAGE=1 bundle exec rspec
       - name: Build gem

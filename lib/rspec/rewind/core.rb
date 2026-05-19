@@ -101,7 +101,8 @@ module RSpec
       def publish_retry_summary
         return unless configuration.display_retry_summary
 
-        ::RSpec.configuration.reporter.message(configuration.retry_summary.to_message(budget: configuration.retry_budget))
+        summary = configuration.retry_summary.to_message(budget: configuration.retry_budget)
+        ::RSpec.configuration.reporter.message(summary)
       rescue StandardError
         nil
       end

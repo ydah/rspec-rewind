@@ -51,8 +51,8 @@ module RSpec
       end
 
       def to_h
-        FIELDS.each_with_object({}) do |field, payload|
-          payload[field] = public_send(field)
+        FIELDS.to_h do |field|
+          [field, public_send(field)]
         end
       end
     end

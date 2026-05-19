@@ -8,3 +8,5 @@ gem 'rake', '~> 13.0'
 gem 'rbs', '~> 3.0', require: false
 gem 'rspec', '~> 3.13'
 gem 'simplecov', '~> 0.22', require: false
+
+gem 'rubocop', '~> 1.86', group: :development, require: false

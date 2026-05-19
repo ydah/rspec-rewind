@@ -1,0 +1,44 @@
+AllCops:
+  NewCops: enable
+  TargetRubyVersion: 3.1
+  SuggestExtensions: false
+  Exclude:
+    - 'coverage/**/*'
+    - 'pkg/**/*'
+    - 'tmp/**/*'
+
+Layout/LineLength:
+  Max: 120
+
+Metrics/AbcSize:
+  Max: 60
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
+
+Metrics/ClassLength:
+  Max: 220
+
+Metrics/CyclomaticComplexity:
+  Max: 12
+
+Metrics/MethodLength:
+  Max: 80
+
+Metrics/ParameterLists:
+  Max: 20
+
+Metrics/PerceivedComplexity:
+  Max: 12
+
+Naming/FileName:
+  Exclude:
+    - 'lib/rspec-rewind.rb'
+
+Naming/PredicateMethod:
+  AllowBangMethods: true
+
+Style/Documentation:
+  Enabled: false

@@ -36,20 +36,25 @@ module RSpec
         strategy = first_non_nil(backoff, @metadata[:rewind_backoff], @configuration.backoff)
         return normalize_delay(strategy) if strategy.is_a?(Numeric)
 
-        raise ArgumentError, 'backoff must be a non-negative numeric value or callable' unless strategy.respond_to?(:call)
+        unless strategy.respond_to?(:call)
+          raise ArgumentError,
+                'backoff must be a non-negative numeric value or callable'
+        end
 
         args = {
           retry_number: retry_number,
           example: @example,
           exception: exception
         }
-        args[:context] = DelayContext.new(
-          retry_number: retry_number,
-          resolved_retries: resolved_retries,
-          metadata: @metadata,
-          previous_sleep_seconds: previous_sleep_seconds,
-          failure_fingerprint: failure_fingerprint
-        ) if accepts_keyword?(strategy, :context)
+        if accepts_keyword?(strategy, :context)
+          args[:context] = DelayContext.new(
+            retry_number: retry_number,
+            resolved_retries: resolved_retries,
+            metadata: @metadata,
+            previous_sleep_seconds: previous_sleep_seconds,
+            failure_fingerprint: failure_fingerprint
+          )
+        end
 
         raw = strategy.call(**args)
 
@@ -87,7 +92,7 @@ module RSpec
       def accepts_keyword?(callable, keyword)
         parameters = callable.respond_to?(:parameters) ? callable.parameters : callable.method(:call).parameters
         parameters.any? do |type, name|
-          type == :keyrest || ((type == :key || type == :keyreq) && name == keyword)
+          type == :keyrest || (%i[key keyreq].include?(type) && name == keyword)
         end
       end
     end

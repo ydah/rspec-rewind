@@ -22,7 +22,8 @@ module RSpec
           return unless strict_exception_matchers
           return if matcher.is_a?(Class) && matcher <= Exception
 
-          raise ArgumentError, "#{field} Module entries must be Exception classes when strict matcher validation is enabled"
+          raise ArgumentError,
+                "#{field} Module entries must be Exception classes when strict matcher validation is enabled"
         end
         return if matcher.is_a?(Regexp) || matcher.respond_to?(:call)
 

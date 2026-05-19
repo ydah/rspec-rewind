@@ -52,11 +52,11 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     transition.perform(**params)
 
     expect(builder).to have_received(:build).with(hash_including(
-                                                   status: :reset_failed,
-                                                   retry_reason: :state_reset,
-                                                   decision_reason: :state_reset_failed,
-                                                   exception: reset_exception
-                                                 ))
+                                                    status: :reset_failed,
+                                                    retry_reason: :state_reset,
+                                                    decision_reason: :state_reset_failed,
+                                                    exception: reset_exception
+                                                  ))
     expect(notifier).to have_received(:publish_reset_failed).with(event)
     expect(notifier).to have_received(:notify_retry).with(event)
   end
@@ -75,11 +75,11 @@ RSpec.describe RSpec::Rewind::RetryTransition do
     expect { transition.perform(**params) }.to raise_error(reset_exception)
 
     expect(builder).to have_received(:build).with(hash_including(
-                                                   status: :reset_failed,
-                                                   retry_reason: :state_reset,
-                                                   decision_reason: :state_reset_failed,
-                                                   exception: reset_exception
-                                                 ))
+                                                    status: :reset_failed,
+                                                    retry_reason: :state_reset,
+                                                    decision_reason: :state_reset_failed,
+                                                    exception: reset_exception
+                                                  ))
     expect(notifier).to have_received(:publish_reset_failed).with(event)
     expect(notifier).not_to have_received(:notify_retry)
   end

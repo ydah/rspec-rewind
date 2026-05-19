@@ -107,8 +107,9 @@ module RSpec
       end
 
       def retry_summary=(summary)
-        raise ArgumentError, 'retry_summary must respond to #record and #reset!' unless summary.respond_to?(:record) &&
-                                                                                      summary.respond_to?(:reset!)
+        unless summary.respond_to?(:record) && summary.respond_to?(:reset!)
+          raise ArgumentError, 'retry_summary must respond to #record and #reset!'
+        end
 
         @retry_summary = summary
       end

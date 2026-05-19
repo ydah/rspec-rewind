@@ -38,7 +38,8 @@ RSpec.describe RSpec::Rewind::RetryLoop do
     flaky_transition = instance_spy(RSpec::Rewind::FlakyTransition)
     allow(attempt_runner).to receive(:run)
     allow(attempt_runner).to receive(:run).and_return(*attempt_results) unless attempt_results.empty?
-    allow(retry_transition).to receive(:perform).and_return(RSpec::Rewind::SleepMeasurement.new(scheduled: 0.0, actual: 0.0))
+    allow(retry_transition).to receive(:perform).and_return(RSpec::Rewind::SleepMeasurement.new(scheduled: 0.0,
+                                                                                                actual: 0.0))
 
     retry_loop = described_class.new(
       example: example,

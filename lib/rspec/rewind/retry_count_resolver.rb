@@ -12,7 +12,7 @@ module RSpec
       end
 
       def resolve(explicit_retries:)
-        return 0 if normalize_retry_override(explicit_retries) == 0
+        return 0 if normalize_retry_override(explicit_retries) == 0 # rubocop:disable Style/NumericPredicate
         return 0 if env_disabled?
 
         env_retries = env_retries_value

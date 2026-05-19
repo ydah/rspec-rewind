@@ -84,13 +84,13 @@ module RSpec
         allowed(matched_retry_on: retry_match&.description)
       end
 
-      private
-
       MatchResult = Struct.new(:matched, :description, :error, keyword_init: true) do
         def matched?
           matched
         end
       end
+
+      private
 
       def find_match(matchers)
         last_error = nil
@@ -113,7 +113,7 @@ module RSpec
           when Regexp
             matcher.match?(@exception.message.to_s)
           else
-            matcher.respond_to?(:call) && !!call_with_context(matcher)
+            matcher.respond_to?(:call) && !call_with_context(matcher).nil?
           end
 
         MatchResult.new(matched: matched, description: matcher_description(matcher))
@@ -122,16 +122,10 @@ module RSpec
       end
 
       def retry_on_default_allowed?
-        case @retry_on_default
-        when :all
-          true
-        when :standard_errors
-          @exception.is_a?(StandardError)
-        when :none
-          false
-        else
-          true
-        end
+        return @exception.is_a?(StandardError) if @retry_on_default == :standard_errors
+        return false if @retry_on_default == :none
+
+        true
       end
 
       def call_with_context(callable)
