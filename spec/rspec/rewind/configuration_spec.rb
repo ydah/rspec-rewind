@@ -150,6 +150,16 @@ RSpec.describe RSpec::Rewind::Configuration do
       expect(config.retry_on).to eq([RuntimeError])
     end
 
+    it 'revalidates existing matchers when strict matcher validation is enabled' do
+      config = described_class.new
+      config.retry_on = [Enumerable]
+
+      expect do
+        config.strict_matcher_validation = true
+      end.to raise_error(ArgumentError, /Exception classes/)
+      expect(config.strict_matcher_validation).to be(false)
+    end
+
     it 'raises when skip_retry_on contains unsupported matcher types' do
       config = described_class.new
 

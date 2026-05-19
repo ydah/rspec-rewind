@@ -201,7 +201,9 @@ module RSpec
       end
 
       def strict_matcher_validation=(value)
-        @strict_matcher_validation = normalize_boolean(value, field: 'strict_matcher_validation')
+        normalized = normalize_boolean(value, field: 'strict_matcher_validation')
+        validate_existing_matchers_for_strict_mode if normalized
+        @strict_matcher_validation = normalized
       end
 
       def metadata_report_keys=(values)
@@ -258,6 +260,11 @@ module RSpec
 
         path = reporter.path
         path&.to_s
+      end
+
+      def validate_existing_matchers_for_strict_mode
+        normalize_matchers(@retry_on || [], field: 'retry_on', strict_exception_matchers: true)
+        normalize_matchers(@skip_retry_on || [], field: 'skip_retry_on', strict_exception_matchers: true)
       end
     end
   end
